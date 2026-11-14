@@ -4,7 +4,7 @@ An open arcade of vibe-coded browser games.
 
 People are making small, fun games with AI. Usually each one is a single HTML file, and most of them end up forgotten in someone's downloads folder. SlopGames puts them in one place where anyone can play them.
 
-**Play:** open `index.html` in a browser. You don't need to build or install anything.
+**Play:** [SlopGames is hosted here](https://github.com/Niuslar/SlopGames), or clone the repository and open `index.html` in your browser.
 
 ---
 
@@ -82,13 +82,6 @@ Games need to be fun to play and safe to open. A PR will be merged when the game
 You can make up a new tag if none of these fit. Just keep it short and lowercase.
 
 ---
-
-## Hosting
-
-The site is plain static files, so it runs anywhere:
-
-- **GitHub Pages:** go to Settings → Pages → Deploy from branch → `main` / root.
-- **Locally:** double-click `index.html`. The game list is in a `<script>` file instead of JSON, so it also works from `file://` with no server.
 
 ## Project layout
 
