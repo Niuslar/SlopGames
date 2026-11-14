@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>Jamblobs</title>
+<style>
+  :root{--bg1:#ffb347;--bg2:#3a1c5c;--ink:#fff8ee;--panel:#1b1326;--line:#ffffff22}
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;height:100%;overflow:hidden;background:#120c1c;color:var(--ink);
+    font:15px/1.3 system-ui,-apple-system,"Segoe UI",sans-serif;user-select:none;-webkit-user-select:none}
+  body{display:flex;flex-direction:column}
+  button{font:inherit;color:inherit;cursor:pointer;border:0;background:none;padding:0}
+
+  /* ---------- top bar ---------- */
+  header{display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px;padding:8px 12px;background:var(--panel);border-bottom:1px solid var(--line)}
+  h1{font-size:19px;margin:0 4px 0 0;letter-spacing:.5px;font-weight:900}
+  h1 span{color:var(--bg1);transition:color .6s}
+  .btn{padding:7px 13px;border-radius:999px;background:#ffffff14;border:1px solid var(--line);font-weight:700;white-space:nowrap}
+  .btn:hover{background:#ffffff26}
+  #play{background:#fff8ee;color:#1b1326;min-width:84px}
+  #play.nudge{animation:nudge 1s infinite}
+  @keyframes nudge{50%{transform:scale(1.08);box-shadow:0 0 0 6px #ffffff22}}
+  .moods{display:flex;border-radius:999px;overflow:hidden;border:1px solid var(--line)}
+  .moods button{padding:7px 11px;font-weight:700;background:#ffffff0d}
+  .moods button.on{background:var(--bg1);color:#1b1326}
+  label.tempo{display:flex;align-items:center;gap:6px;font-weight:700;font-size:13px}
+  label.tempo input{width:90px;accent-color:var(--bg1)}
+  .grow{flex:1}
+
+  /* ---------- stage ---------- */
+  #stage{flex:1;min-height:120px;position:relative;display:grid;grid-template-columns:repeat(8,1fr);grid-template-rows:1fr;gap:4px;
+    padding:10px 10px 6px;background:radial-gradient(120% 90% at 50% 110%,var(--bg1),var(--bg2) 60%,#120c1c);transition:--bg1 .6s}
+  #stage.pulse::before{content:"";position:absolute;inset:0;background:#fff;opacity:.05;pointer-events:none}
+  #hint{position:absolute;left:0;right:0;top:14%;text-align:center;font-size:clamp(16px,3.2vw,26px);font-weight:800;opacity:.85;pointer-events:none;padding:0 16px}
+  #bars{position:absolute;top:8px;right:12px;display:flex;gap:5px}
+  #bars i{width:9px;height:9px;border-radius:50%;background:#ffffff33}
+  #bars i.on{background:#fff}
+  .slot{display:flex;flex-direction:column;align-items:center;min-width:0;min-height:0}
+  .body{flex:1;width:100%;min-height:0;container-type:size;display:grid;place-items:end center}
+  .floor{width:60cqw;height:8px;border-radius:50%;border:2px dashed #ffffff3d;margin-bottom:6px}
+  .blob{position:relative;width:min(78cqw,80cqh);aspect-ratio:1;background:var(--c);border-radius:30%;
+    box-shadow:inset 0 -8px 0 #0000002e,inset 0 6px 0 #ffffff40,0 6px 0 #00000033;transform-origin:50% 100%;transition:filter .2s,opacity .2s}
+  .blob.bass{aspect-ratio:1.2;width:min(88cqw,96cqh);border-radius:50% 50% 42% 42%}
+  .blob.melody{aspect-ratio:.8;width:min(62cqw,64cqh);border-radius:50% 50% 38% 38%}
+  .blob.fx{border-radius:42% 58% 55% 45%/58% 44% 56% 42%}
+  .blob.fx::before{content:"";position:absolute;left:50%;top:-16%;width:6%;height:18%;background:var(--c);border-radius:9px 9px 0 0;transform:translateX(-50%)}
+  .blob.fx::after{content:"";position:absolute;left:50%;top:-24%;width:16%;aspect-ratio:1;background:#fff8ee;border-radius:50%;transform:translateX(-50%)}
+  .eye{position:absolute;top:28%;width:22%;aspect-ratio:1;background:#fff;border-radius:50%;display:grid;place-items:center;transition:transform .15s}
+  .eye.l{left:20%}.eye.r{right:20%}
+  .eye i{width:48%;aspect-ratio:1;background:#1b1326;border-radius:50%}
+  .mouth{position:absolute;left:50%;top:60%;width:28%;height:7%;background:#1b1326;border-radius:3px 3px 99px 99px;transform:translateX(-50%)}
+  .blob.muted{filter:grayscale(.85) brightness(.7)}
+  .blob.muted .eye{transform:scaleY(.12)}
+  .tag{display:flex;align-items:center;gap:2px;height:30px;max-width:100%;font-size:12px;font-weight:800}
+  .tag .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:0 2px}
+  .tag button{width:26px;height:26px;border-radius:50%;background:#00000055;flex:none;font-size:13px}
+  .tag button:hover{background:#000000aa}
+  .slot.empty .tag{visibility:hidden}
+  #toast{position:absolute;left:50%;bottom:44%;transform:translate(-50%,20px);background:#fff8ee;color:#1b1326;padding:10px 18px;border-radius:999px;
+    font-weight:900;opacity:0;transition:.25s;pointer-events:none;white-space:nowrap;box-shadow:0 6px 24px #0008;z-index:3;max-width:92%;overflow:hidden;text-overflow:ellipsis}
+  #toast.show{opacity:1;transform:translate(-50%,0)}
+
+  /* ---------- tray ---------- */
+  #tray,#editor{background:var(--panel);border-top:1px solid var(--line);padding:8px 10px 10px}
+  #tray{display:grid;grid-template-columns:1fr 1fr;gap:6px 14px}
+  .cat{display:flex;align-items:center;gap:5px;min-width:0}
+  .cat b{width:54px;flex:none;font-size:11px;text-transform:uppercase;letter-spacing:1px;opacity:.7}
+  .chip{flex:1;min-width:0;height:36px;border-radius:10px;border:2px solid var(--c);color:var(--c);font-weight:800;font-size:13px;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:0 4px}
+  .chip:hover{background:#ffffff12}
+  .chip.on{background:var(--c);color:#1b1326}
+
+  /* ---------- pattern editor ---------- */
+  #editor{display:none}
+  body.editing #editor{display:block}
+  body.editing #tray{display:none}
+  .edhead{display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap}
+  .edhead b{font-size:16px}
+  .edhead small{opacity:.65}
+  .block{display:grid;gap:3px;margin-bottom:8px;touch-action:none}
+  .block .lab{font-size:11px;font-weight:700;opacity:.75;align-self:center;overflow:hidden;white-space:nowrap}
+  .cell{height:24px;border-radius:5px;background:#ffffff12}
+  .cell.b4{background:#ffffff22}
+  .cell.on{background:var(--c)}
+  .cell.ph{box-shadow:inset 0 0 0 2px #fff}
+
+  /* ---------- found jams ---------- */
+  #jams{position:fixed;inset:0;background:#000a;display:none;place-items:center;z-index:5;padding:16px}
+  #jams.show{display:grid}
+  #jams div.box{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px 18px;max-width:420px;width:100%;max-height:100%;overflow:auto}
+  #jams h2{margin:0 0 4px;font-size:18px}
+  #jams p{margin:0 0 10px;opacity:.7;font-size:13px}
+  #jams li{list-style:none;padding:7px 0;border-top:1px solid var(--line);opacity:.55}
+  #jams li.got{opacity:1}
+  #jams li b{display:block}
+  #jams ul{margin:0 0 12px;padding:0}
+
+  @media (max-width:760px){
+    #stage{grid-template-columns:repeat(4,1fr);grid-template-rows:1fr 1fr}
+    #tray{grid-template-columns:1fr}
+    h1{font-size:17px}
+    .btn,.moods button{padding:6px 9px;font-size:13px}
+    .tag{flex-wrap:wrap;justify-content:center;height:46px;align-content:center}
+    .tag .nm{width:100%;text-align:center}
+    .cat b{width:12px;writing-mode:vertical-rl;transform:rotate(180deg);font-size:8px;text-align:center;letter-spacing:.5px}
+    .chip{font-size:12px;padding:0 2px}
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>Jam<span>blobs</span></h1>
+  <button class="btn" id="play">▶ Play</button>
+  <div class="moods" id="moods"></div>
+  <label class="tempo">Tempo <input id="bpm" type="range" min="70" max="160" step="1"><span id="bpmv"></span></label>
+  <span class="grow"></span>
+  <button class="btn" id="surprise" title="Fill the stage with a random band">Surprise me</button>
+  <button class="btn" id="clear" title="Send everyone home">Clear</button>
+  <button class="btn" id="jamsbtn" title="Secret band combos you've found">★ <span id="found"></span></button>
+</header>
+
+<main id="stage">
+  <div id="hint">Tap a sound below to wake up a blob</div>
+  <div id="bars"><i></i><i></i><i></i><i></i></div>
+  <div id="toast"></div>
+</main>
+
+<section id="tray"></section>
+<section id="editor"></section>
+
+<div id="jams"><div class="box">
+  <h2>Secret jams</h2>
+  <p>Some bands are special. Put the right blobs on stage together to discover them.</p>
+  <ul id="jamlist"></ul>
+  <button class="btn" id="jamsclose">Back to the band</button>
+</div></div>
+
+<script>
+"use strict";
+// Jamblobs: a toy for making music. Every sound is a short loop played by a blob.
+// All loops share one tempo, one key and one chord progression, so any mix sounds good together.
+
+// ============================================================ music theory
+const MAJOR = [0, 2, 4, 5, 7, 9, 11], MINOR = [0, 2, 3, 5, 7, 8, 10], PHRYG = [0, 1, 3, 5, 7, 8, 10];
+// root = MIDI note of the key, pent = which scale steps melodies may use, prog = one chord per bar (4 bars)
+const MOODS = [
+  { name: "Sunny",  root: 48, scale: MAJOR, pent: [0, 1, 2, 4, 5], prog: [0, 4, 5, 3], bg: ["#ffb347", "#b83b5e"] },
+  { name: "Moody",  root: 45, scale: MINOR, pent: [0, 2, 3, 4, 6], prog: [0, 5, 2, 6], bg: ["#5b8cff", "#2a1b5c"] },
+  { name: "Dreamy", root: 50, scale: MAJOR, pent: [0, 1, 2, 4, 5], prog: [3, 0, 5, 4], bg: ["#ff8fd0", "#3b2a7a"] },
+  { name: "Spooky", root: 52, scale: PHRYG, pent: [0, 2, 3, 4, 6], prog: [0, 1, 0, 6], bg: ["#7dff9b", "#16302b"] },
+];
+const hz = midi => 440 * Math.pow(2, (midi - 69) / 12);
+
+// What a voice needs to know when it plays: step length, and how to find notes for the current bar's chord.
+function musicInfo(bar) {
+  const m = MOODS[state.mood], deg = m.prog[bar];
+  const drop = m.root + m.scale[deg] > 55 ? -12 : 0; // keep chord roots in a comfy range
+  return {
+    sd: 60 / state.bpm / 4,
+    // k: 0 root, 1 third, 2 fifth, 3 root an octave up, ...
+    chord: (k, oct = 0) => { const d = deg + 2 * (k % 3); return hz(m.root + 12 * oct + drop + m.scale[d % 7] + 12 * Math.floor(d / 7) + 12 * Math.floor(k / 3)); },
+    // i: step of the five-note scale, going up
+    scale: (i, oct = 0) => hz(m.root + 12 * oct + m.scale[m.pent[i % 5]] + 12 * Math.floor(i / 5)),
+  };
+}
+
+// ============================================================ sound engine (all synthesized, no samples)
+let ac, master, delay, send, noiseBuf;
+const slotOut = Array(8).fill(null);
+
+function ensureAudio() {
+  if (ac) { if (ac.state === "suspended") ac.resume(); return; }
+  ac = new (window.AudioContext || window.webkitAudioContext)();
+  const comp = ac.createDynamicsCompressor();
+  master = ac.createGain(); master.gain.value = 0.6;
+  master.connect(comp).connect(ac.destination);
+  // a soft echo for melodies and effects
+  delay = ac.createDelay(1.5); send = ac.createGain(); send.gain.value = 0.22;
+  const fb = ac.createGain(); fb.gain.value = 0.3;
+  const lp = ac.createBiquadFilter(); lp.frequency.value = 2400;
+  send.connect(delay).connect(lp).connect(fb).connect(delay); lp.connect(master);
+  setDelayTime();
+  noiseBuf = ac.createBuffer(1, ac.sampleRate, ac.sampleRate);
+  const d = noiseBuf.getChannelData(0);
+  for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+  state.stage.forEach((s, i) => s && wire(i));
+}
+const setDelayTime = () => delay && delay.delayTime.setTargetAtTime(60 / state.bpm / 4 * 3, ac.currentTime, 0.05);
+
+function wire(i) { // give a stage slot its own output
+  if (!ac) return;
+  unwire(i);
+  const g = ac.createGain(), cat = INST_BY_ID[state.stage[i].id].cat;
+  g.connect(master);
+  if (cat === "melody" || cat === "fx") g.connect(send);
+  slotOut[i] = g;
+}
+function unwire(i) {
+  const g = slotOut[i]; if (!g) return;
+  g.gain.setTargetAtTime(0, ac.currentTime, 0.04);
+  setTimeout(() => g.disconnect(), 400);
+  slotOut[i] = null;
+}
+
+// Shared tail of every voice: optional filter sweep, then a volume envelope (attack a, decay d).
+function shape(src, out, t, o) {
+  const a = o.a ?? 0.004, d = o.d ?? 0.2, g = ac.createGain();
+  let node = src;
+  if (o.cut) {
+    const f = ac.createBiquadFilter();
+    f.type = o.ft || "lowpass"; f.Q.value = o.q || 0.8;
+    f.frequency.setValueAtTime(o.cut, t);
+    if (o.cut2) f.frequency.exponentialRampToValueAtTime(o.cut2, t + (o.sweep || a + d));
+    node.connect(f); node = f;
+  }
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.linearRampToValueAtTime(o.vol ?? 0.3, t + a);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + a + d);
+  node.connect(g).connect(out);
+  src.start(t); src.stop(t + a + d + 0.05);
+}
+function tone(out, t, o) { // an oscillator, optionally gliding from f to f2
+  const osc = ac.createOscillator();
+  osc.type = o.type || "sine";
+  osc.frequency.setValueAtTime(o.f, t);
+  if (o.f2) osc.frequency.exponentialRampToValueAtTime(o.f2, t + (o.bend || 0.1));
+  if (o.det) osc.detune.value = o.det;
+  if (o.vib) {
+    const l = ac.createOscillator(), lg = ac.createGain();
+    l.frequency.value = 5.5; lg.gain.value = o.vib;
+    l.connect(lg).connect(osc.frequency); l.start(t); l.stop(t + (o.a ?? 0) + (o.d ?? 0.2) + 0.1);
+  }
+  shape(osc, out, t, o);
+}
+function noise(out, t, o) { // filtered hiss: hats, snares, whooshes
+  const src = ac.createBufferSource();
+  src.buffer = noiseBuf; src.loop = true;
+  shape(src, out, t, { ft: "highpass", ...o });
+}
+function vox(out, t, o) { // a cartoon voice: a buzzy tone through two "vowel" filters
+  const mix = ac.createGain(); mix.connect(out);
+  for (const F of [o.F1, o.F2]) {
+    const f = ac.createBiquadFilter(); f.type = "bandpass"; f.frequency.value = F; f.Q.value = 7;
+    f.connect(mix);
+    tone(f, t, { type: "sawtooth", ...o });
+  }
+}
+
+const DRUM = {
+  kick:   (o, t) => tone(o, t, { f: 150, f2: 45, bend: 0.12, d: 0.32, vol: 0.9 }),
+  sub:    (o, t) => { tone(o, t, { f: 80, f2: 46, bend: 0.25, d: 0.55, vol: 0.8 }); tone(o, t, { type: "triangle", f: 160, f2: 92, bend: 0.2, d: 0.3, vol: 0.15 }); },
+  snare:  (o, t) => { noise(o, t, { cut: 1800, d: 0.16, vol: 0.42 }); tone(o, t, { type: "triangle", f: 200, f2: 130, d: 0.09, vol: 0.35 }); },
+  clap:   (o, t) => { for (const k of [0, 0.012, 0.025]) noise(o, t + k, { ft: "bandpass", cut: 1400, q: 1.2, d: k > 0.02 ? 0.16 : 0.02, vol: 0.55 }); },
+  hat:    (o, t) => noise(o, t, { cut: 7500, d: 0.04, vol: 0.2 }),
+  ohat:   (o, t) => noise(o, t, { cut: 7000, d: 0.2, vol: 0.16 }),
+  rim:    (o, t) => tone(o, t, { type: "triangle", f: 1700, d: 0.025, vol: 0.3 }),
+  tom:    (o, t) => tone(o, t, { f: 190, f2: 95, bend: 0.15, d: 0.25, vol: 0.6 }),
+  shaker: (o, t) => noise(o, t, { cut: 5500, a: 0.015, d: 0.05, vol: 0.15 }),
+  bell:   (o, t) => { for (const f of [560, 845]) tone(o, t, { type: "square", f, d: 0.12, vol: 0.08 }); },
+  conga:  (o, t) => tone(o, t, { f: 330, f2: 250, bend: 0.05, d: 0.13, vol: 0.45 }),
+};
+
+// ============================================================ the instruments
+// Patterns are grids of rows x steps. Row 0 is the bottom row in the editor (the lowest note).
+const grid = (len, rows, hits) => { // hits: "step:row step:row ..."
+  const g = Array.from({ length: rows }, () => Array(len).fill(0));
+  for (const h of hits.split(" ")) { const [s, r] = h.split(":"); g[+r][+s] = 1; }
+  return g;
+};
+const drums = (...rows) => rows.map(r => [...r.padEnd(16, ".")].slice(0, 16).map(c => c === "x" ? 1 : 0));
+const kit = (id, name, c, voices, labels, pat) => ({ id, name, c, cat: "beat", len: 16, labels, pat, dens: 0.3,
+  play: (i, t, m, o) => DRUM[voices[i]](o, t) });
+
+const INST = [
+  // ---- beats: three drums each
+  kit("boomer",  "Boomer",  "#ff6b4a", ["kick", "snare", "hat"],   ["Kick", "Snare", "Hat"],   drums("x.....x.x.......", "....x.......x...", "x.x.x.x.x.x.x.x.")),
+  kit("stomper", "Stomper", "#ff8a3d", ["kick", "clap", "ohat"],   ["Kick", "Clap", "Tss"],    drums("x...x...x...x...", "....x.......x...", "..x...x...x...x.")),
+  kit("skitter", "Skitter", "#ffa94d", ["sub", "rim", "hat"],      ["Boom", "Tick", "Hat"],    drums("x.........x.....", "...x..x....x..x.", "x.x.x.xxx.x.xxxx")),
+  kit("shakes",  "Shakes",  "#ffc24b", ["conga", "bell", "shaker"], ["Conga", "Bell", "Shake"], drums("..x...x..x....x.", "x..x..x...x..x..", "x.xxx.xxx.xxx.xx")),
+  kit("thumper", "Thumper", "#ff5d73", ["kick", "snare", "tom"],   ["Kick", "Snare", "Tom"],   drums("x..x......x..x..", "....x..x....x...", "..............xx")),
+
+  // ---- bass: follows the chords (rows: root, third, fifth, high root)
+  { id: "rubber", name: "Rubber", c: "#b388ff", cat: "bass", len: 16, rows: 4, dens: 0.3, pat: grid(16, 4, "0:0 3:0 6:0 10:3 12:0 14:3"),
+    play: (i, t, m, o) => tone(o, t, { type: "sawtooth", f: m.chord(i, -1), cut: 900, cut2: 150, q: 4, d: 0.28, vol: 0.5 }) },
+  { id: "whale", name: "Whale", c: "#8c7bff", cat: "bass", len: 16, rows: 4, dens: 0.15, pat: grid(16, 4, "0:0 8:0 10:0"),
+    play: (i, t, m, o) => { const f = m.chord(i, -1); tone(o, t, { f, d: 0.6, vol: 0.7 }); tone(o, t, { type: "triangle", f: f * 2, d: 0.35, vol: 0.14 }); } },
+  { id: "squelch", name: "Squelch", c: "#d07bff", cat: "bass", len: 16, rows: 4, dens: 0.5, pat: grid(16, 4, "0:0 2:0 3:0 5:3 7:0 8:0 10:0 12:3 13:0 14:2"),
+    play: (i, t, m, o) => tone(o, t, { type: "sawtooth", f: m.chord(i, -1), cut: 2600, cut2: 180, q: 11, d: 0.16, vol: 0.34 }) },
+  { id: "bouncy", name: "Bouncy", c: "#a06bff", cat: "bass", len: 16, rows: 4, dens: 0.4, pat: grid(16, 4, "0:0 2:3 4:0 6:3 8:0 10:3 12:0 14:3"),
+    play: (i, t, m, o) => tone(o, t, { type: "square", f: m.chord(i, -1), cut: 1300, d: 0.14, vol: 0.3 }) },
+  { id: "slap", name: "Slap", c: "#c9a2ff", cat: "bass", len: 16, rows: 4, dens: 0.3, pat: grid(16, 4, "0:0 3:2 6:0 9:0 10:3 12:2 14:3"),
+    play: (i, t, m, o) => { const f = m.chord(i, -1); tone(o, t, { type: "triangle", f, d: 0.22, vol: 0.5 }); tone(o, t, { type: "sawtooth", f: f * 2, cut: 3200, cut2: 300, sweep: 0.08, d: 0.12, vol: 0.2 }); } },
+
+  // ---- melodies
+  { id: "glass", name: "Glass", c: "#4de0c2", cat: "melody", len: 32, rows: 6, dens: 0.25, pat: grid(32, 6, "0:2 3:3 6:4 8:2 12:1 14:0 16:2 19:3 22:5 24:4 28:3"),
+    play: (i, t, m, o) => { const f = m.scale(i, 2); tone(o, t, { f, d: 0.9, vol: 0.22 }); tone(o, t, { f: f * 4, d: 0.25, vol: 0.05 }); } },
+  { id: "pluck", name: "Pluck", c: "#5ee08a", cat: "melody", len: 16, rows: 6, dens: 0.35, pat: grid(16, 6, "0:0 3:1 6:2 8:3 11:2 14:1"),
+    play: (i, t, m, o) => { const f = m.chord(i, 1); tone(o, t, { type: "sawtooth", f, cut: 3200, cut2: 500, d: 0.24, vol: 0.2 }); tone(o, t, { type: "triangle", f, det: 8, d: 0.2, vol: 0.18 }); } },
+  { id: "chip", name: "Chip", c: "#8be04d", cat: "melody", len: 32, rows: 6, dens: 0.4, pat: grid(32, 6, "0:4 2:4 4:3 6:4 10:2 12:3 16:4 18:4 20:5 22:4 26:3 28:2 30:1"),
+    play: (i, t, m, o) => tone(o, t, { type: "square", f: m.scale(i, 1), cut: 4500, d: 0.15, vol: 0.11 }) },
+  { id: "pad", name: "Cloud", c: "#4dc7e0", cat: "melody", len: 16, rows: 4, dens: 0.08, pat: grid(16, 4, "0:0 0:1 0:2"),
+    play: (i, t, m, o) => { for (const det of [-9, 9]) tone(o, t, { type: "sawtooth", f: m.chord(i, 1), det, cut: 1300, a: 0.12, d: m.sd * 15, vol: 0.07 }); } },
+  { id: "whistle", name: "Whistle", c: "#3fe0a0", cat: "melody", len: 32, rows: 6, dens: 0.18, pat: grid(32, 6, "0:3 4:4 8:5 14:4 16:3 20:2 24:1 28:2"),
+    play: (i, t, m, o) => tone(o, t, { f: m.scale(i, 2), vib: 9, a: 0.04, d: m.sd * 4.5, vol: 0.17 }) },
+
+  // ---- effects: three silly noises each
+  { id: "zaps", name: "Zaps", c: "#ff7ac8", cat: "fx", len: 32, labels: ["Pew", "Whoop", "Blip"], dens: 0.1, pat: grid(32, 3, "0:0 28:1 14:2 15:2"),
+    play: (i, t, m, o) => i === 0 ? tone(o, t, { type: "sawtooth", f: 2400, f2: 150, bend: 0.22, cut: 5000, d: 0.24, vol: 0.14 })
+      : i === 1 ? tone(o, t, { type: "square", f: 200, f2: 2600, bend: 0.3, cut: 5000, d: 0.3, vol: 0.1 })
+      : tone(o, t, { type: "square", f: m.scale(7, 2), d: 0.05, vol: 0.1 }) },
+  { id: "choir", name: "Choir", c: "#ff9ad5", cat: "fx", len: 32, labels: ["Ooh", "Aah", "Hey!"], dens: 0.08, pat: grid(32, 3, "0:0 16:1 12:2 28:2"),
+    play: (i, t, m, o) => i === 0 ? vox(o, t, { f: m.chord(0, 1), F1: 350, F2: 800, a: 0.08, d: m.sd * 7, vol: 0.5, vib: 3 })
+      : i === 1 ? vox(o, t, { f: m.chord(2, 1), F1: 800, F2: 1200, a: 0.08, d: m.sd * 7, vol: 0.4, vib: 3 })
+      : vox(o, t, { f: m.chord(0, 1) * 1.6, f2: m.chord(3, 1), bend: 0.06, F1: 650, F2: 1700, d: 0.16, vol: 0.6 }) },
+  { id: "space", name: "Space", c: "#ffd24d", cat: "fx", len: 32, labels: ["Boom", "Riser", "Twinkle"], dens: 0.07, pat: grid(32, 3, "0:0 24:1 8:2 20:2"),
+    play: (i, t, m, o) => {
+      if (i === 0) { noise(o, t, { ft: "lowpass", cut: 900, cut2: 80, d: 1.1, vol: 0.5 }); tone(o, t, { f: 90, f2: 30, bend: 0.5, d: 0.8, vol: 0.6 }); }
+      else if (i === 1) noise(o, t, { ft: "bandpass", q: 2, cut: 300, cut2: 7000, a: m.sd * 7.5, d: 0.06, vol: 0.3 });
+      else for (let k = 0; k < 4; k++) tone(o, t + k * 0.06, { f: m.scale(5 + Math.floor(Math.random() * 6), 3), d: 0.25, vol: 0.07 });
+    } },
+  { id: "critters", name: "Critters", c: "#f5e663", cat: "fx", len: 32, labels: ["Ribbit", "Chirp", "Meow"], dens: 0.1, pat: grid(32, 3, "6:0 22:0 10:1 11:1 26:1 30:2"),
+    play: (i, t, m, o) => {
+      if (i === 0) for (const k of [0, 0.09]) tone(o, t + k, { type: "sawtooth", f: 110, f2: 190, bend: 0.06, cut: 700, q: 5, d: 0.07, vol: 0.4 });
+      else if (i === 1) tone(o, t, { f: 2500, f2: 4200, bend: 0.05, d: 0.06, vol: 0.12 });
+      else vox(o, t, { f: 480, f2: 760, bend: 0.14, F1: 900, F2: 1900, a: 0.03, d: 0.3, vol: 0.5 });
+    } },
+  { id: "scratch", name: "Scratch", c: "#ff8f8f", cat: "fx", len: 32, labels: ["Wicka", "Stutter", "Tape"], dens: 0.1, pat: grid(32, 3, "4:0 7:0 20:1 21:1 22:1 23:1 28:2"),
+    play: (i, t, m, o) => {
+      if (i === 0) { noise(o, t, { ft: "bandpass", q: 3, cut: 800, cut2: 3500, sweep: 0.07, d: 0.08, vol: 0.6 }); noise(o, t + 0.09, { ft: "bandpass", q: 3, cut: 3500, cut2: 800, sweep: 0.07, d: 0.08, vol: 0.5 }); }
+      else if (i === 1) tone(o, t, { type: "square", f: m.chord(0, 2), cut: 3000, d: 0.04, vol: 0.12 });
+      else tone(o, t, { type: "sawtooth", f: 420, f2: 40, bend: 0.5, cut: 1500, d: 0.5, vol: 0.2 });
+    } },
+];
+const INST_BY_ID = Object.fromEntries(INST.map(x => [x.id, x]));
+const CATS = [["beat", "Beats"], ["bass", "Bass"], ["melody", "Melody"], ["fx", "Effects"]];
+const rowsOf = inst => inst.pat.length;
+
+// ============================================================ secret band combos
+const JAMS = [
+  { id: "garage",  name: "Garage Band",    hint: "One of everything.",                 test: (ids, n) => n.beat && n.bass && n.melody && n.fx },
+  { id: "circle",  name: "Drum Circle",    hint: "Three drummers walk into a bar…",    test: (ids, n) => n.beat >= 3 },
+  { id: "low",     name: "Low Rider",      hint: "All about that bass. Lots of it.",   test: (ids, n) => n.bass >= 3 },
+  { id: "lullaby", name: "Lullaby",        hint: "Glass and Cloud, and no drums.",     test: (ids, n) => ids.has("glass") && ids.has("pad") && !n.beat },
+  { id: "disco",   name: "Space Disco",    hint: "Stomp among the stars, with lasers.", test: ids => ids.has("stomper") && ids.has("space") && ids.has("zaps") },
+  { id: "swamp",   name: "Swamp Party",    hint: "Critters like rubber and shakers.",  test: ids => ids.has("critters") && ids.has("rubber") && ids.has("shakes") },
+  { id: "arcade",  name: "8-Bit Hero",     hint: "Chip, a bouncy bass, skittery hats.", test: ids => ids.has("chip") && ids.has("bouncy") && ids.has("skitter") },
+  { id: "camp",    name: "Campfire",       hint: "Sing and whistle over a pluck.",     test: ids => ids.has("choir") && ids.has("whistle") && ids.has("pluck") },
+  { id: "full",    name: "Full House",     hint: "No empty spots on stage.",           test: (ids, n, total) => total === 8 },
+  { id: "mad",     name: "Mad Scientist",  hint: "Rewrite a blob's loop yourself (✎).", test: () => state.edited },
+];
+
+// ============================================================ state (saved in localStorage)
+const KEY = "jamblobs-v1";
+const state = { stage: Array(8).fill(null), grids: {}, mood: 0, bpm: 110, found: [], edited: false };
+try {
+  const s = JSON.parse(localStorage.getItem(KEY) || "null");
+  if (s && Array.isArray(s.stage)) {
+    state.stage = Array.from({ length: 8 }, (_, i) => s.stage[i] && INST_BY_ID[s.stage[i].id] ? { id: s.stage[i].id, muted: !!s.stage[i].muted } : null);
+    for (const [id, g] of Object.entries(s.grids || {})) {
+      const inst = INST_BY_ID[id];
+      if (inst && Array.isArray(g) && g.length === rowsOf(inst) && g.every(r => Array.isArray(r) && r.length === inst.len)) state.grids[id] = g.map(r => r.map(v => v ? 1 : 0));
+    }
+    state.mood = MOODS[s.mood] ? s.mood : 0;
+    state.bpm = Math.min(160, Math.max(70, +s.bpm || 110));
+    state.found = (s.found || []).filter(id => JAMS.some(j => j.id === id));
+    state.edited = !!s.edited;
+  }
+} catch (e) { /* storage unavailable: play without saving */ }
+const save = () => { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} };
+const gridOf = id => state.grids[id] || INST_BY_ID[id].pat;
+const ownGrid = id => state.grids[id] ??= INST_BY_ID[id].pat.map(r => [...r]);
+
+// ============================================================ the clock
+let playing = false, step = 0, nextT = 0, timer = 0, curBar = 0;
+const visQ = []; // things to show on screen at the moment their sound plays
+
+function schedule(s, t) {
+  const bar = Math.floor(s / 16) % 4, m = musicInfo(bar);
+  visQ.push({ t, step: s, bar });
+  state.stage.forEach((slot, i) => {
+    if (!slot || slot.muted || !slotOut[i]) return;
+    const inst = INST_BY_ID[slot.id], g = gridOf(slot.id), col = s % inst.len;
+    let hit = false;
+    for (let r = 0; r < g.length; r++) if (g[r][col]) { inst.play(r, t, m, slotOut[i]); hit = true; }
+    if (hit) visQ.push({ t, slot: i });
+  });
+}
+function tick() {
+  while (nextT < ac.currentTime + 0.12) { schedule(step, nextT); nextT += 60 / state.bpm / 4; step++; }
+}
+function start() {
+  ensureAudio();
+  if (playing) return;
+  playing = true; step = 0; nextT = ac.currentTime + 0.06;
+  timer = setInterval(tick, 25); tick();
+  syncPlayBtn();
+}
+function stop() {
+  playing = false; clearInterval(timer); visQ.length = 0;
+  syncPlayBtn(); showStep(-1, -1);
+}
+
+// ============================================================ screen
+const $ = id => document.getElementById(id);
+const stageEl = $("stage"), trayEl = $("tray"), editorEl = $("editor");
+const slotEls = [], chipEls = {};
+let editing = null, edCols = [], lastCol = -1;
+
+function build() {
+  for (let i = 0; i < 8; i++) {
+    const el = document.createElement("div");
+    el.className = "slot";
+    el.innerHTML = `<div class="body"></div><div class="tag"><span class="nm"></span><button class="ed" title="Edit loop">✎</button><button class="rm" title="Remove">✕</button></div>`;
+    el.querySelector(".ed").onclick = () => openEditor(state.stage[i].id);
+    el.querySelector(".rm").onclick = () => removeAt(i);
+    stageEl.append(el); slotEls.push(el);
+  }
+  for (const [cat, label] of CATS) {
+    const row = document.createElement("div");
+    row.className = "cat";
+    row.innerHTML = `<b>${label}</b>`;
+    for (const inst of INST.filter(x => x.cat === cat)) {
+      const b = document.createElement("button");
+      b.className = "chip"; b.textContent = inst.name; b.style.setProperty("--c", inst.c);
+      b.onclick = () => toggleInst(inst.id);
+      row.append(b); chipEls[inst.id] = b;
+    }
+    trayEl.append(row);
+  }
+  MOODS.forEach((m, i) => {
+    const b = document.createElement("button");
+    b.textContent = m.name; b.onclick = () => setMood(i);
+    $("moods").append(b);
+  });
+}
+
+function renderSlot(i) {
+  const el = slotEls[i], slot = state.stage[i], body = el.querySelector(".body");
+  el.classList.toggle("empty", !slot);
+  if (!slot) { body.innerHTML = `<div class="floor"></div>`; return; }
+  const inst = INST_BY_ID[slot.id];
+  body.innerHTML = `<button class="blob ${inst.cat}${slot.muted ? " muted" : ""}" title="Tap to mute"><span class="eye l"><i></i></span><span class="eye r"><i></i></span><span class="mouth"></span></button>`;
+  const blob = body.firstChild;
+  blob.style.setProperty("--c", inst.c);
+  blob.onclick = () => { slot.muted = !slot.muted; blob.classList.toggle("muted", slot.muted); save(); };
+  el.querySelector(".nm").textContent = inst.name;
+}
+function renderAll() {
+  for (let i = 0; i < 8; i++) renderSlot(i);
+  const on = new Set(state.stage.filter(Boolean).map(s => s.id));
+  for (const id in chipEls) chipEls[id].classList.toggle("on", on.has(id));
+  $("hint").style.display = on.size ? "none" : "";
+  $("found").textContent = `${state.found.length}/${JAMS.length}`;
+  syncPlayBtn();
+}
+function syncPlayBtn() {
+  $("play").textContent = playing ? "■ Stop" : "▶ Play";
+  $("play").classList.toggle("nudge", !playing && state.stage.some(Boolean));
+}
+function setMood(i) {
+  state.mood = i;
+  const m = MOODS[i];
+  document.documentElement.style.setProperty("--bg1", m.bg[0]);
+  document.documentElement.style.setProperty("--bg2", m.bg[1]);
+  [...$("moods").children].forEach((b, k) => b.classList.toggle("on", k === i));
+  save();
+}
+function setBpm(v) {
+  state.bpm = +v; $("bpm").value = v; $("bpmv").textContent = v;
+  if (ac) setDelayTime();
+  save();
+}
+
+let toastTimer = 0;
+function toast(msg) {
+  const t = $("toast"); t.textContent = msg; t.classList.add("show");
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove("show"), 2200);
+}
+
+// ---- stage changes
+function toggleInst(id) {
+  const at = state.stage.findIndex(s => s && s.id === id);
+  if (at >= 0) return removeAt(at);
+  const free = state.stage.indexOf(null);
+  if (free < 0) return toast("The stage is full. Tap ✕ under a blob first.");
+  state.stage[free] = { id, muted: false };
+  ensureAudio(); wire(free);
+  stageChanged();
+  if (!playing) start();
+  const blob = slotEls[free].querySelector(".blob");
+  blob.animate([{ transform: "translateY(-60%) scale(.6,1.3)", opacity: 0 }, { transform: "none", opacity: 1 }], { duration: 280, easing: "cubic-bezier(.3,1.6,.5,1)" });
+}
+function removeAt(i) {
+  const slot = state.stage[i]; if (!slot) return;
+  if (editing === slot.id) closeEditor();
+  state.stage[i] = null;
+  if (ac) unwire(i);
+  stageChanged();
+}
+function stageChanged() { renderAll(); save(); checkJams(); }
+
+function checkJams() {
+  const on = state.stage.filter(Boolean), ids = new Set(on.map(s => s.id)), n = { beat: 0, bass: 0, melody: 0, fx: 0 };
+  for (const s of on) n[INST_BY_ID[s.id].cat]++;
+  for (const j of JAMS) {
+    if (state.found.includes(j.id) || !j.test(ids, n, on.length)) continue;
+    state.found.push(j.id); save();
+    toast(`★ Secret jam found: ${j.name}!`);
+    $("found").textContent = `${state.found.length}/${JAMS.length}`;
+    for (const el of slotEls) el.querySelector(".blob")?.animate([{ transform: "translateY(0)" }, { transform: "translateY(-30%) rotate(8deg)" }, { transform: "translateY(0)" }], { duration: 500, easing: "ease-out" });
+    break; // one celebration at a time; the rest get found on the next change
+  }
+}
+function showJams() {
+  $("jamlist").innerHTML = JAMS.map(j => state.found.includes(j.id)
+    ? `<li class="got"><b>★ ${j.name}</b>${j.hint}</li>` : `<li><b>???</b>${j.hint}</li>`).join("");
+  $("jams").classList.add("show");
+}
+
+function surprise() {
+  ensureAudio();
+  closeEditor();
+  state.stage.forEach((s, i) => s && unwire(i));
+  const pick = (cat, n) => INST.filter(x => x.cat === cat).sort(() => Math.random() - 0.5).slice(0, n).map(x => x.id);
+  const band = [...pick("beat", 1 + (Math.random() < 0.5)), ...pick("bass", 1), ...pick("melody", 1 + (Math.random() < 0.6)), ...pick("fx", Math.random() < 0.7 ? 1 : 0)];
+  state.stage = Array.from({ length: 8 }, (_, i) => band[i] ? { id: band[i], muted: false } : null);
+  state.stage.forEach((s, i) => s && wire(i));
+  stageChanged();
+  if (!playing) start();
+}
+
+// ---- pattern editor
+function openEditor(id) {
+  editing = id;
+  const inst = INST_BY_ID[id], rows = rowsOf(inst);
+  const blocks = inst.len === 32 && innerWidth < 760 ? 2 : 1, cols = inst.len / blocks; // two lines of 16 on small screens
+  document.body.classList.add("editing");
+  editorEl.style.setProperty("--c", inst.c);
+  editorEl.innerHTML = `<div class="edhead"><b>${inst.name}'s loop</b><small>${inst.labels ? "Tap or drag to add hits" : "Tap or drag to add notes. Higher rows are higher notes."}</small><span class="grow"></span>
+    <button class="btn" data-a="shuffle">Shuffle</button><button class="btn" data-a="wipe">Wipe</button><button class="btn" data-a="reset">Reset</button><button class="btn" data-a="done">Done</button></div>`;
+  edCols = Array.from({ length: inst.len }, () => []); lastCol = -1;
+  const g = gridOf(id);
+  for (let b = 0; b < blocks; b++) {
+    const block = document.createElement("div");
+    block.className = "block";
+    block.style.gridTemplateColumns = (inst.labels ? "46px " : "") + `repeat(${cols},1fr)`;
+    for (let r = rows - 1; r >= 0; r--) {
+      if (inst.labels) block.insertAdjacentHTML("beforeend", `<span class="lab">${inst.labels[r]}</span>`);
+      for (let s = b * cols; s < (b + 1) * cols; s++) {
+        const c = document.createElement("div");
+        c.className = "cell" + (s % 4 === 0 ? " b4" : "") + (g[r][s] ? " on" : "");
+        c.dataset.r = r; c.dataset.s = s;
+        block.append(c); edCols[s].push(c);
+      }
+    }
+    editorEl.append(block);
+  }
+}
+function closeEditor() { editing = null; document.body.classList.remove("editing"); editorEl.innerHTML = ""; }
+
+function setCell(cell, v) {
+  const r = +cell.dataset.r, s = +cell.dataset.s, g = ownGrid(editing);
+  if (g[r][s] === v) return;
+  g[r][s] = v; cell.classList.toggle("on", !!v);
+  if (v) { ensureAudio(); const i = state.stage.findIndex(x => x && x.id === editing); if (slotOut[i]) INST_BY_ID[editing].play(r, ac.currentTime + 0.01, musicInfo(curBar), slotOut[i]); }
+  state.edited = true; save(); checkJams();
+}
+let paint = null;
+editorEl.addEventListener("pointerdown", e => {
+  const cell = e.target.closest(".cell"); if (!cell) return;
+  e.preventDefault();
+  paint = cell.classList.contains("on") ? 0 : 1;
+  setCell(cell, paint);
+});
+addEventListener("pointermove", e => {
+  if (paint === null || !editing) return;
+  const cell = document.elementFromPoint(e.clientX, e.clientY)?.closest?.(".cell");
+  if (cell) setCell(cell, paint);
+});
+addEventListener("pointerup", () => paint = null);
+addEventListener("pointercancel", () => paint = null);
+editorEl.addEventListener("click", e => {
+  const a = e.target.dataset?.a; if (!a) return;
+  const id = editing, inst = INST_BY_ID[id];
+  if (a === "done") return closeEditor();
+  if (a === "reset") delete state.grids[id];
+  if (a === "wipe") state.grids[id] = inst.pat.map(r => r.map(() => 0));
+  if (a === "shuffle") { // random loop: busier on the beat, one note per step
+    const g = inst.pat.map(r => r.map(() => 0));
+    for (let s = 0; s < inst.len; s++) {
+      const p = inst.dens * (s % 4 === 0 ? 1.7 : s % 2 === 0 ? 1 : 0.4);
+      if (inst.cat === "beat") { for (const row of g) if (Math.random() < p) row[s] = 1; }
+      else if (Math.random() < p) g[Math.floor(Math.random() * g.length)][s] = 1;
+    }
+    if (!g.some(r => r.some(Boolean))) g[0][0] = 1;
+    state.grids[id] = g; state.edited = true;
+  }
+  save(); openEditor(id); checkJams();
+});
+
+// ---- animation: bounce blobs exactly when their notes sound
+function showStep(s, bar) {
+  [...$("bars").children].forEach((d, i) => d.classList.toggle("on", i === bar));
+  stageEl.classList.toggle("pulse", s >= 0 && s % 4 === 0);
+  if (lastCol >= 0) edCols[lastCol]?.forEach(c => c.classList.remove("ph"));
+  lastCol = -1;
+  if (editing && s >= 0) { lastCol = s % INST_BY_ID[editing].len; edCols[lastCol]?.forEach(c => c.classList.add("ph")); }
+}
+function frame() {
+  if (ac && playing) {
+    const now = ac.currentTime;
+    while (visQ.length && visQ[0].t <= now) {
+      const ev = visQ.shift();
+      if (ev.step !== undefined) { curBar = ev.bar; showStep(ev.step, ev.bar); continue; }
+      const blob = slotEls[ev.slot].querySelector(".blob");
+      if (!blob) continue;
+      blob.animate([{ transform: "scale(1.12,.86)" }, { transform: "scale(.96,1.06)", offset: 0.5 }, { transform: "none" }], { duration: 190 });
+      blob.querySelector(".mouth").animate([{ height: "24%", width: "24%" }, { height: "7%", width: "28%" }], { duration: 190 });
+    }
+  }
+  requestAnimationFrame(frame);
+}
+
+// ---- wiring
+$("play").onclick = () => playing ? stop() : start();
+$("bpm").oninput = e => setBpm(e.target.value);
+$("surprise").onclick = surprise;
+$("clear").onclick = () => { closeEditor(); state.stage.forEach((s, i) => s && ac && unwire(i)); state.stage.fill(null); stageChanged(); };
+$("jamsbtn").onclick = showJams;
+$("jamsclose").onclick = () => $("jams").classList.remove("show");
+$("jams").onclick = e => { if (e.target.id === "jams") $("jams").classList.remove("show"); };
+addEventListener("keydown", e => { if (e.code === "Space") { e.preventDefault(); playing ? stop() : start(); } });
+addEventListener("resize", () => { if (editing) openEditor(editing); });
+
+build(); setMood(state.mood); setBpm(state.bpm); renderAll(); frame();
+</script>
+</body>
+</html>

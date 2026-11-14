@@ -26,4 +26,16 @@ window.SLOP_GAMES = [
     added: "2026-11-14",
     thumbnail: "games/isekai-alchemist/thumb.svg"
   },
+  {
+    slug: "jamblobs",
+    title: "Jamblobs",
+    description: "Make a song in a minute. Tap beats, basslines, melodies and silly effects to wake up a band of blobs, switch moods, rewrite their loops and hunt for secret band combos.",
+    author: "SlopGames",
+    authorUrl: "",
+    madeWith: "Claude",
+    tags: ["music", "toy", "relaxing", "mobile"],
+    controls: "Mouse or touch (Space to play/stop)",
+    added: "2026-11-14",
+    thumbnail: "games/jamblobs/thumb.svg"
+  },
 ];
