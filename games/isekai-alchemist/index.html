@@ -47,6 +47,8 @@
   #stage{flex:1;min-height:150px;position:relative}
   #cv{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none}
   #readout{position:absolute;left:0;right:0;bottom:22px;text-align:center;font-size:22px;font-weight:700;letter-spacing:1px;pointer-events:none;text-shadow:0 2px 8px #000}
+  #readout small{display:block;font-size:12px;font-weight:600;letter-spacing:0;margin-top:2px;color:#ffb36b}
+  #readout small.ok{color:var(--good)}
   #readout.empty{font-size:14px;font-weight:400;color:var(--dim);letter-spacing:0}
   #msg{position:absolute;left:0;right:0;bottom:0;text-align:center;font-size:13px;color:var(--bad);min-height:18px;pointer-events:none;text-shadow:0 1px 4px #000}
   #streak{position:absolute;top:2px;right:4px;font-size:14px;font-weight:700;color:#ffb36b;pointer-events:none}
@@ -65,6 +67,8 @@
   .el .n{position:absolute;top:1px;left:4px;font-size:9px;color:var(--dim)}
   .el .s{font-size:clamp(17px,4.4vw,22px);font-weight:800;color:var(--c);line-height:1;margin-top:5px}
   .el .nm{font-size:8px;color:var(--dim);margin-top:2px;max-width:100%;overflow:hidden}
+  .el .h{position:absolute;top:2px;right:3px;font-size:7px;line-height:1;color:var(--cyan);letter-spacing:-.5px}
+  .el .h i{font-style:normal;opacity:.4}
   .el.new{animation:glow 1.2s ease-in-out 4}
   .el.lock{border-style:dashed;border-color:var(--line);opacity:.6;cursor:default}
   @keyframes glow{50%{box-shadow:0 0 16px var(--c);transform:scale(1.08)}}
@@ -105,6 +109,10 @@
   .row{display:flex;justify-content:space-between;gap:10px;font-size:15px;padding:3px 0;border-bottom:1px dashed #6fe3ff33}
   .row b{color:var(--cyan)}
   .titles span{display:inline-block;margin:3px 4px 0 0;padding:3px 9px;border-radius:99px;font-size:12px;border:1px solid #6fe3ff66;color:var(--cyan)}
+  .ex{font-size:20px;font-weight:800;color:var(--gold);text-align:center;background:#00000038;border-radius:10px;padding:8px;margin:6px 0 4px;letter-spacing:.5px}
+  .why{font-size:13px!important;color:var(--good);text-align:left}
+  .rule{background:#00000038;border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:8px;font-size:13.5px;line-height:1.45}
+  .rule b.t{color:var(--cyan);font-size:15px}
   .ghost{background:none;border:1px solid var(--line);border-radius:9px;padding:7px 12px;font-size:13px;color:var(--dim);margin-top:12px}
   #toasts{position:fixed;top:60px;left:0;right:0;display:flex;flex-direction:column;align-items:center;gap:6px;pointer-events:none;z-index:9}
   .toast{font-size:16px;font-weight:800;padding:7px 16px;border-radius:99px;background:#0d2a4dee;border:1px solid var(--cyan);color:var(--cyan);
@@ -187,6 +195,31 @@ const EL={
 const START=['H','O','C'];
 const SYMS=Object.keys(EL);
 const NOBLE=['He','Ne'], PAIRS=['H','O','N','Cl','F'];
+/* Hands = how many bonds an atom likes to make (its usual valence). Iron has two moods: 3 hands or 2. */
+const VAL={H:[1],O:[2],C:[4],Na:[1],Cl:[1],N:[3],Ca:[2],Fe:[3,2],S:[2],Si:[4],Al:[3],He:[0],Ne:[0],K:[1],Mg:[2],Cu:[2],Ag:[1],F:[1],Au:[1]};
+const SOLID=['C','Na','Fe','S','Si','Al','K','Mg','Ca','Cu','Ag','Au'];
+const handsTxt=s=>s==='Fe'?'3 hands (sometimes 2)':VAL[s][0]?VAL[s][0]+' hand'+(VAL[s][0]>1?'s':''):'no hands';
+const handDots=s=>VAL[s][0]?'●'.repeat(VAL[s][0]):'0';
+/* Can these atoms make one molecule with every hand held? Returns {ok} or {free:n} or {apart} or {noble}. */
+function hands(c){
+  const syms=Object.keys(c);let n=0;for(const s of syms)n+=c[s];
+  if(!n)return null;
+  if(syms.some(s=>!VAL[s][0]))return n===1?{ok:1,note:'noble gas: no hands, happy alone'}:{noble:1};
+  if(n===1&&SOLID.includes(syms[0]))return {ok:1,note:'pure element: it holds hands with copies of itself'};
+  // every way of splitting multi-mood atoms between their moods
+  let sets=[[]];
+  for(const s of syms){const v=VAL[s],out=[];
+    for(const d of sets){if(v.length===1)out.push(d.concat(Array(c[s]).fill(v[0])));
+      else for(let k=0;k<=c[s];k++)out.push(d.concat(Array(k).fill(v[0]),Array(c[s]-k).fill(v[1])));}
+    sets=out;}
+  let best=null;
+  for(const d of sets){
+    const sum=d.reduce((a,b)=>a+b,0),m=Math.max(...d);let r;
+    if(m>sum-m)r={free:2*m-sum};else if(sum%2)r={free:1};else if(sum/2<n-1)r={apart:1};else return {ok:1};
+    if(!best||(r.apart&&!best.apart)||(!r.apart&&!best.apart&&r.free<best.free))best=r;
+  }
+  return best;
+}
 // Rough order for writing a formula the player has not discovered yet
 const FORDER=['Na','K','Mg','Ca','Al','Fe','Cu','Ag','Au','Si','C','N','H','S','Cl','F','O','He','Ne'];
 
@@ -255,7 +288,24 @@ rec('Ag','Ag','Silver','🥈','Pure silver, the best conductor of electricity of
 rec('Ag2 S','Ag2S','Tarnish','🌑','The dark coating on old silver: silver joined with sulfur from the air.');
 rec('Na F','NaF','Sodium fluoride','🦷','The tooth-protecting ingredient in many toothpastes.');
 rec('Au','Au','Gold','👑','Gold is an element, so it cannot be made from anything else. Alchemists tried for centuries!');
+rec('Na','Na','Sodium metal','🧈','So soft you can cut it like butter. It is kept under oil, because air and water make it fizz.');
+rec('K','K','Potassium metal','💜','Even softer than sodium. Drop it in water and it bursts into lilac flames.');
+rec('Mg','Mg','Magnesium metal','🎆','Burns with a blinding white light. Old camera flashes and flares used it.');
+rec('Ca','Ca','Calcium metal','🦴','A silvery metal. In your bones it is joined with other atoms, never pure.');
+/* Real chemical names: the name is the recipe, once you can read it */
+const CHEM={H2O:'dihydrogen monoxide (its joke name)',H2:'hydrogen, in a pair',O2:'oxygen, in a pair',O3:'trioxygen',CO2:'carbon dioxide',CO:'carbon monoxide',
+  CH4:'carbon tetrahydride',H2O2:'hydrogen peroxide',C:'pure carbon',C8:'pure carbon in a tight crystal',CH3COOH:'acetic acid (2 C, 4 H, 2 O)',H2CO3:'hydrogen carbonate (carbonic acid)',
+  NaCl:'sodium chloride',HCl:'hydrogen chloride',NaOH:'sodium hydroxide',Cl2:'chlorine, in a pair',NaHCO3:'sodium hydrogen carbonate',NaClO:'sodium hypochlorite (Na + Cl + one O)',
+  N2:'nitrogen, in a pair',NH3:'nitrogen trihydride',N2O:'dinitrogen monoxide',NO2:'nitrogen dioxide',HNO3:'hydrogen nitrate',CaO:'calcium oxide',CaCO3:'calcium carbonate',
+  'Ca(OH)2':'calcium hydroxide',CaCl2:'calcium chloride',CaSO4:'calcium sulfate',CaF2:'calcium fluoride',Fe2O3:'iron oxide',FeS2:'iron disulfide',Fe3O4:'iron oxide (iron in both moods)',
+  SO2:'sulfur dioxide',H2S:'hydrogen sulfide',H2SO4:'hydrogen sulfate',SiO2:'silicon dioxide',SiC:'silicon carbide',Al2O3:'aluminium oxide',KNO3:'potassium nitrate',KCl:'potassium chloride',
+  MgO:'magnesium oxide',MgSO4:'magnesium sulfate','Mg(OH)2':'magnesium hydroxide',CuO:'copper oxide',CuSO4:'copper sulfate',Ag2S:'silver sulfide',NaF:'sodium fluoride'};
+/* The few real molecules that break the simple hands rule */
+const ODD={CO:'Carbon should use 4 hands, but here it shares a strange triple bond with one oxygen. That oddness is part of why it is so dangerous.',
+  NO2:'One hand is left empty! That makes it restless and reactive, which is why it is such a nasty gas.'};
 BYF.C8=keyOf({C:8});R[BYF.C8].f='C (×8)';BYF.C=keyOf({C:1});
+for(const f in CHEM)R[BYF[f]].chem=CHEM[f];
+for(const f in ODD)R[BYF[f]].odd=ODD[f];
 const KEYS=Object.keys(R), TOTAL=KEYS.length;
 
 /* ───────────── Story ───────────── */
@@ -354,59 +404,101 @@ const CHAPTERS=[
     text:'The smoke is gone! One thing is left: the magic Gate that pulled you here could send you home.',goal:'Open the Gate.'},
 ];
 const Q=(who,face,ask,want,thanks,extra)=>Object.assign({who,face,ask,want:BYF[want],thanks},extra);
+/* Every story quest teaches by reasoning, not recall:
+   tip = a free nudge, dec = what the name tells you, how = how the hands fit together. */
 const QUESTS=[
   // 1 · Dustwell
   Q('Farmer Barley','👨‍🌾','The smoke dried up our well. Can you make <b>WATER</b>?','H2O',
-    'Water! From nothing! And the palace threw YOU out?!',{tip:'Water is H₂O: tap <b>H</b> twice and <b>O</b> once, then Transmute.',title:'Well Whisperer'}),
+    'Water! From nothing! And the palace threw YOU out?!',{title:'Well Whisperer',
+    tip:'See the dots on each tile? Those are <b>hands</b>. Use H and O so that no hand is left empty. The counter under the circle helps.',
+    dec:'Water is made of hydrogen (H) and oxygen (O).',how:'O has 2 hands, H has only 1. So one oxygen needs two hydrogens, one for each hand: H–O–H.'}),
   Q('Blacksmith Brunhild','👩‍🏭','My forge fire is choking. It needs <b>OXYGEN GAS</b> to burn.','O2',
-    'The flames are roaring! You bottled the wind!',{tip:'Oxygen atoms never float around alone.'}),
+    'The flames are roaring! You bottled the wind!',{tip:'Oxygen gas is only oxygen. A lone O has empty hands. Who could hold them?',
+    dec:'Oxygen gas contains nothing but oxygen atoms.',how:'Two atoms can hold more than one hand at a time. Two O atoms hold both hands with each other: O=O.'}),
   Q('Elder Hobb','🧔','Tonight we feast in your honour! But the drinks are flat. I need bubbles: <b>CARBON DIOXIDE</b>.','CO2',
-    'It fizzes! Take this letter to the Guild in Brinehaven. They need you.',{unlock:['Na','Cl'],rank:1,tip:'"Di" means two.'}),
+    'It fizzes! Take this letter to the Guild in Brinehaven. They need you.',{unlock:['Na','Cl'],rank:1,tip:'The name is the recipe: "di" means two.',
+    dec:'Carbon DIoxide: one carbon, and DI = two oxygens.',how:'C has 4 hands. Each O holds 2 of them: O=C=O.'}),
   // 2 · Brinehaven
   Q('Guild Clerk Mina','👩‍💼','Want to join the Guild? Entry test: bring me <b>SALT</b>. The mine is three days away.','NaCl',
-    'That took four seconds. …Welcome to the Guild.',{unlock:['N']}),
+    'That took four seconds. …Welcome to the Guild.',{unlock:['N'],tip:'Salt\'s chemical name is <b>sodium chloride</b>. A name ending in "-ide" means: just these elements.',
+    dec:'Sodium chloride: sodium (Na) and chlorine (Cl), nothing else.',how:'Na has 1 hand and Cl has 1 hand. One of each: Na–Cl.'}),
   Q('Farmer Odalys','👩‍🌾','Ash has ruined the soil. They say smelly <b>AMMONIA</b> feeds a field.','NH3',
-    'Phew, what a stink! But look at those turnips GROW!'),
+    'Phew, what a stink! But look at those turnips GROW!',{tip:'Ammonia is nitrogen and hydrogen. Count nitrogen\'s hands.',
+    dec:'Ammonia is nitrogen (N) and hydrogen (H). Chemists also call it nitrogen <b>tri</b>hydride.',how:'N has 3 hands and each H has 1. So N needs three hydrogens.'}),
+  Q('Soapmaker Odo','🧖','Ash on everything! To make soap I need <b>LYE</b>. Its proper name is sodium hydroxide.','NaOH',
+    'Soap for all! The whole Guild smells of lavender.',{tip:'"Hydroxide" is a little team: one O holding one H.',
+    dec:'Sodium hydroxide = sodium (Na) + hydroxide (an O with an H).',how:'O has 2 hands. H takes one, which leaves O one free hand for Na: Na–O–H.'}),
   Q('Baker Pim','🧑‍🍳','The fort needs bread, and mine is as flat as a shield. I need <b>BAKING SODA</b>!','NaHCO3',
-    'It is HUGE! This loaf is taller than I am!',{tip:'Six atoms. Its long name is sodium hydrogen carbonate.'}),
-  Q('Soapmaker Odo','🧖','Ash on everything! To make soap I need <b>LYE</b> (sodium hydroxide).','NaOH',
-    'Soap for all! Mina is promoting you… to the front line. Sorry.',{unlock:['Ca'],rank:2}),
+    'It is HUGE! This loaf is taller than I am! …Mina says the fort needs you next. The front line. Sorry.',{unlock:['Ca'],rank:2,
+    tip:'Its chemical name is <b>sodium hydrogen carbonate</b>. Read the name piece by piece. A <b>carbonate</b> is a team: one C with three O.',
+    dec:'Sodium (Na) + hydrogen (H) + carbonate (C with 3 O).',how:'Inside the carbonate team, C holds all three O, but two of the O still have a free hand. Na takes one, H takes the other.'}),
   // 3 · Fort Ironwall
   Q('Mason Grit','👷','Trolls smashed our wall! I need <b>LIMESTONE</b> (calcium carbonate).','CaCO3',
-    'Solid as a rock! Because it is a rock!',{tip:'A "carbonate" is one carbon with three oxygens.'}),
+    'Solid as a rock! Because it is a rock!',{tip:'You built a carbonate team for the baker. This time calcium fills its free hands.',
+    dec:'Calcium (Ca) + carbonate (C with 3 O).',how:'The carbonate team has 2 free hands, and Ca has 2 hands. A perfect fit.'}),
   Q('Healer Sana','🧝‍♀️','So many scraped knights. I need <b>HYDROGEN PEROXIDE</b> to clean their wounds.','H2O2',
-    'It bubbles! The knights are crying, but they are clean.',{unlock:['Fe','S'],tip:'It is water with one extra oxygen.'}),
+    'It bubbles! The knights are crying, but they are clean.',{unlock:['Fe','S'],tip:'"Per-oxide" means extra oxygen. Start from water and add one O.',
+    dec:'Hydrogen peroxide: like water, but with one extra oxygen.',how:'The two O atoms hold one hand with each other. Each O has one hand left, and an H takes it: H–O–O–H.'}),
   Q('Captain Rook','💂','The Demon Lord CURSED our swords! They turn red and crumble! You say it is just <b>RUST</b>? Prove it.','Fe2O3',
-    'Just iron and damp air? No curse at all… What else have we got wrong about him?',{tip:'Two iron atoms, and more oxygens than irons.'}),
+    'Just iron and damp air? No curse at all… What else have we got wrong about him?',{tip:'Rust is <b>iron oxide</b>: just iron and oxygen. Iron has 3 hands and oxygen 2, so the numbers do not match one to one.',
+    dec:'Iron oxide: only iron (Fe) and oxygen (O).',how:'Swap trick: Fe has 3 hands, O has 2, so take 2 Fe and 3 O. That is 6 hands on each side.'}),
   Q('Paymaster Finn','🧑‍💼','I swapped our pay chest for a cart of gold! …Why the faces? Show me what <b>FOOL\'S GOLD</b> is.','FeS2',
-    'Iron and sulfur?! Swindled! Oh, and a royal messenger is here for you.',{unlock:['Si','Al'],rank:3}),
+    'Iron and sulfur?! Swindled! Oh, and a royal messenger is here for you.',{unlock:['Si','Al'],rank:3,tip:'Its chemical name is <b>iron disulfide</b>.',
+    dec:'Iron disulfide: one iron (Fe), and DI = two sulfurs (S).',how:'The two S atoms hold one hand with each other, leaving 2 free hands. Iron switches to its 2-hand mood to take them.'}),
   // 4 · Aurelis
   Q('Glassmaker Vitra','👩‍🎨','Ash storms broke the palace windows. I need <b>QUARTZ</b> to make glass.','SiO2',
-    'So clear! Now the court can see the sky. They will not like it.'),
+    'So clear! Now the court can see the sky. They will not like it.',{tip:'Quartz is <b>silicon dioxide</b>. Silicon has 4 hands, like carbon.',
+    dec:'Silicon dioxide: one silicon (Si), two oxygens.',how:'Si has 4 hands and each O holds 2, exactly like carbon dioxide.'}),
   Q('Princess Rubia','👸','You are the useless hero! Oops, sorry. I lost my <b>RUBY</b>. Could you…?','Al2O3',
-    'Shinier than the old one! I name you Royal Alchemist!',{unlock:['He','Ne'],rank:4,tip:'A ruby is aluminium oxide: two aluminiums, three oxygens.'}),
+    'Shinier than the old one! I name you Royal Alchemist!',{unlock:['He','Ne'],rank:4,tip:'A ruby is <b>aluminium oxide</b>. Compare the hands, like with rust.',
+    dec:'Aluminium oxide: only aluminium (Al) and oxygen (O).',how:'Al has 3 hands and O has 2. Same swap trick as rust: 2 Al and 3 O.'}),
   Q('Little Tobi','🧒','My balloon will not float! Is there a gas lighter than air? <b>HELIUM</b>?','He',
-    'It is flying! …It is gone. Another one?',{tip:'Noble gases prefer to be alone. Completely alone.'}),
+    'It is flying! …It is gone. Another one?',{tip:'Look at helium\'s tile. How many hands does it have?',
+    dec:'Helium is an element, not a mix.',how:'He has 0 hands, so it can never hold anything. One atom, alone.'}),
   Q('Lamplighter Wick','🧑‍🚒','It is dark by lunchtime. They say <b>NEON</b> glows. I could light the whole city!','Ne',
-    'It glows! The streets are bright again!',{unlock:['K','Mg']}),
+    'It glows! The streets are bright again!',{unlock:['K','Mg'],tip:'Neon is helium\'s cousin.',
+    dec:'Neon is an element, a noble gas like helium.',how:'Zero hands, so: one atom, alone.'}),
   Q('Gardener Fern','🧑‍🌾','The Queen\'s roses are dying. I need <b>SALTPETRE</b> (potassium nitrate).','KNO3',
-    'They are blooming! The Queen will see you now.',{unlock:['Cu','Ag','F'],tip:'A "nitrate" is one nitrogen with three oxygens.'}),
+    'They are blooming! The Queen will see you now.',{unlock:['Cu','Ag','F'],tip:'A <b>nitrate</b> is a team: one N with three O. It has 1 free hand.',
+    dec:'Potassium (K) + nitrate (one N with three O).',how:'The nitrate team has 1 free hand, and K has 1 hand. One of each.'}),
   Q('Court Wizard Zeb','🧙‍♂️','Ahem. I called you useless. I was wrong. To mend the sky I need <b>BLUE VITRIOL</b> (copper sulfate).','CuSO4',
-    'Sixty years of study, and you just… tap things. Come, the Queen is waiting.',{tip:'A "sulfate" is one sulfur with four oxygens.'}),
+    'Sixty years of study, and you just… tap things. Come, the Queen is waiting.',{tip:'A <b>sulfate</b> is a team: one S with four O. It has 2 free hands, like carbonate.',
+    dec:'Copper (Cu) + sulfate (one S with four O).',how:'The sulfate team has 2 free hands, and Cu has 2 hands.'}),
   Q('Queen Aurelia','🫅','The smoke tore our sky-shield, and the sun is burning the land. The shield is called <b>OZONE</b>.','O3',
-    'The sky is whole! Now go to Cinder Keep and end this.',{rank:5,tip:'Like oxygen gas, plus one.'}),
+    'The sky is whole! Now go to Cinder Keep and end this.',{rank:5,tip:'Ozone is only oxygen. Its chemical name is <b>tri</b>oxygen.',
+    dec:'Trioxygen: three oxygen atoms, nothing else.',how:'Put three O in a triangle. Each one holds one hand with each of its two neighbours.'}),
   // 5 · Cinder Keep
   Q('Captain Rook','💂','I fought a troll so you could cross. Everything hurts. <b>EPSOM SALT</b> (magnesium sulfate), please…','MgSO4',
-    'Aaaah. Go on without me. I live in this bath now.'),
+    'Aaaah. Go on without me. I live in this bath now.',{tip:'You built a sulfate team for Zeb.',
+    dec:'Magnesium (Mg) + sulfate (one S with four O).',how:'Sulfate has 2 free hands, and Mg has 2 hands.'}),
   Q('Ember the Dragon','🐉','ROAR! NONE SHALL PASS! …Ow. Toothache. Do you have <b>SODIUM FLUORIDE</b> for teeth?','NaF',
-    'Minty! Climb on. I will fly you to the throne room.',{rank:6,title:'Dragon Dentist'}),
+    'Minty! Climb on. I will fly you to the throne room.',{rank:6,title:'Dragon Dentist',tip:'"-ide" again: just these two elements.',
+    dec:'Sodium (Na) + fluorine (F), nothing else.',how:'Both have 1 hand. One of each, just like salt.'}),
   Q('Demon Lord Morgrath','😈','I have raged for 300 years because… my stomach BURNS! Too much acid! I need <b>MILK OF MAGNESIA</b>!','Mg(OH)2',
-    'It stopped. Nobody ever asked what was wrong. I will put the fires out. Maybe open a bakery.',{unlock:['Au'],rank:7,title:'Heartburn Hero',tip:'Magnesium with two "OH" groups. A base cancels out an acid.'}),
+    'It stopped. Nobody ever asked what was wrong. I will put the fires out. Maybe open a bakery.',{unlock:['Au'],rank:7,title:'Heartburn Hero',
+    tip:'Its chemical name is <b>magnesium hydroxide</b>. Remember the hydroxide team from the soap?',
+    dec:'Magnesium (Mg) + hydroxide teams (an O with an H).',how:'Each hydroxide team has 1 free hand. Mg has 2 hands, so it needs two of them: Mg, 2 O and 2 H.'}),
   // 6 · The way home
   Q('King Aurum','🤴','You stopped the smoke! One small thing: my crown needs <b>GOLD</b>. Can you make some from turnips?','Au',
-    'It cannot be made from anything?! Hmph. Zeb has something to show you.',{tip:'Gold is an element, so nothing else can become it. Luckily, Morgrath just gave you some.'}),
+    'It cannot be made from anything?! Hmph. Zeb has something to show you.',{tip:'Gold is an element, so nothing else can become it. Luckily, Morgrath just gave you some.',
+    dec:'Gold is a pure element.',how:'A pure metal holds hands with endless copies of itself, so one Au atom in the circle is enough.'}),
   Q('Court Wizard Zeb','🧙‍♂️','This Gate can send you home, but it needs a flawless <b>DIAMOND</b>.','C8',
-    'Perfect. The Gate is open. It was an honour to be wrong about you.',{title:'Hero of Elementia',end:true,tip:'Diamond is pure carbon, packed tight. Fill the whole circle.'}),
+    'Perfect. The Gate is open. It was an honour to be wrong about you.',{title:'Hero of Elementia',end:true,tip:'Diamond is pure carbon, packed as tightly as it can be.',
+    dec:'Diamond is nothing but carbon.',how:'Each C holds all 4 hands with other carbons in a tight crystal. Fill the whole circle: 8 carbons.'}),
+];
+/* Rules of alchemy: unlocked as the story reaches them, re-readable in the Grimoire */
+const RULES=[
+  {at:0,t:'Hands',ex:'H–O–H',b:'Every atom has a few <b>hands</b>: the dots on its tile. Atoms join by holding hands, and a molecule only holds together when <b>no hand is left empty</b>. H has 1 hand and O has 2, so water is one O holding two H.'},
+  {at:1,t:'Double hands',ex:'O=O · N≡N · H–H',b:'Two atoms can hold 2 or even 3 hands at once. That is how atoms of the same kind pair up. Hydrogen, oxygen, nitrogen, chlorine and fluorine are never found alone.'},
+  {at:2,t:'Counting words',ex:'carbon dioxide → O=C=O',b:'Chemical names count for you: <b>mono</b> = 1, <b>di</b> = 2, <b>tri</b> = 3, <b>tetra</b> = 4. Carbon <b>di</b>oxide is one C and two O.'},
+  {at:3,t:'"-ide" endings',ex:'sodium chloride → Na–Cl',b:'A name ending in <b>-ide</b> means: just these elements, nothing else. Oxide = oxygen, chloride = chlorine, sulfide = sulfur, fluoride = fluorine. The metal is named first.'},
+  {at:5,t:'Team: hydroxide',ex:'OH → 1 free hand',b:'Some atoms travel as a <b>team</b>. Hydroxide is an O holding an H. O has 2 hands and H uses one, so the team has <b>1 free hand</b> for something else.'},
+  {at:6,t:'Team: carbonate',ex:'CO₃ → 2 free hands',b:'<b>Carbonate</b> is one C with three O. Carbon\'s 4 hands hold all three oxygens (one of them with both hands). The other two O each keep a free hand, so the team has <b>2 free hands</b>. Fill one with H and it becomes <b>hydrogen carbonate</b>, with 1 free hand left.'},
+  {at:9,t:'The swap trick',ex:'Fe ●●● + O ●● → Fe₂O₃',b:'When the hands do not match, swap the numbers. Fe has 3 hands and O has 2, so take <b>2</b> Fe and <b>3</b> O. That gives 6 hands on each side. Iron has a second mood too: sometimes it uses only 2 hands.'},
+  {at:10,t:'Pure elements',ex:'Fe · S · Cu · Au',b:'Metals and solids like iron, sulfur, copper and gold hold hands with endless copies of themselves. To make a pure element, one atom in the circle is enough.'},
+  {at:13,t:'Noble gases',ex:'He · Ne',b:'Helium and neon have <b>0 hands</b>. They never bond with anything, so they only exist as single atoms.'},
+  {at:15,t:'More teams',ex:'NO₃ → 1 hand · SO₄ → 2 hands',b:'<b>Nitrate</b> is one N with three O and has 1 free hand. <b>Sulfate</b> is one S with four O and has 2 free hands. A name ending in <b>-ate</b> usually means a team with oxygen in it.'},
+  {at:18,t:'Rule-breakers',ex:'CO · NO₂',b:'A few real molecules break the hands rule, like carbon monoxide and nitrogen dioxide. Chemistry is full of surprises! The Grimoire marks them with 🃏.'},
 ];
 const CROWD=[
   '"They did not even chant a spell!"','The guild clerk faints.','"Is that SS-rank magic?!" "No. It is chemistry."','A bard starts writing a song about you.',
@@ -420,7 +512,7 @@ const TITLES={start:'Useless Hero',noble:'Noble Effort',lonely:'Lonely Atoms',fi
 
 /* ───────────── Save ───────────── */
 const SAVE='isekai-alchemist-v2';
-const fresh=()=>({el:START.slice(),found:{},q:0,xp:0,gold:0,streak:0,best:0,fizz:0,free:0,rank:0,titles:[TITLES.start],hint:0,guild:null,done:0,mute:false,intro:false,seen:0,chap:-1});
+const fresh=()=>({el:START.slice(),found:{},q:0,xp:0,gold:0,streak:0,best:0,fizz:0,free:0,rank:0,titles:[TITLES.start],hint:0,guild:null,done:0,mute:false,intro:false,seen:0,chap:-1,rules:0});
 let S=fresh();
 try{const d=JSON.parse(localStorage.getItem(SAVE));if(d&&Array.isArray(d.el))S=Object.assign(fresh(),d);}catch(e){}
 const save=()=>{try{localStorage.setItem(SAVE,JSON.stringify(S));}catch(e){}};
@@ -516,14 +608,15 @@ const counts=()=>{const c={};for(const a of atoms)c[a.s]=(c[a.s]||0)+1;return c;
 function quest(){
   if(S.q<QUESTS.length)return QUESTS[S.q];
   if(!S.guild){
-    const known=KEYS.filter(k=>S.found[k]&&k!==S.lastGuild);
-    const g=pick(GUILD),k=pick(known);
-    S.guild={who:g[0],face:g[1],want:k,line:pick(['We have run out of','A customer is begging for','The guild needs another batch of','Quick! Somebody ordered','Do you remember how to make'])};
+    const can=k=>Object.keys(R[k].c).every(s=>S.el.includes(s))&&k!==S.lastGuild;
+    const fresh=KEYS.filter(k=>can(k)&&!S.found[k]),known=KEYS.filter(k=>can(k)&&S.found[k]);
+    const g=pick(GUILD),k=pick(fresh.length&&Math.random()<.7?fresh:known);
+    S.guild={who:g[0],face:g[1],want:k,line:pick(['We have run out of','A customer is begging for','The guild needs a batch of','Quick! Somebody ordered','Can you work out how to make'])};
     S.lastGuild=k;save();
   }
   const g=S.guild;
-  return {who:g.who,face:g.face,want:g.want,guild:true,ask:`${g.line} <b>${R[g.want].name.toUpperCase()}</b>${g.line.startsWith('Do')?'?':'.'}`,
-    thanks:pick(['Perfect, exactly as ordered!','From memory, too! Incredible.','You make it look so easy.','The guild thanks you, Alchemist.'])};
+  return {who:g.who,face:g.face,want:g.want,guild:true,ask:`${g.line} <b>${R[g.want].name.toUpperCase()}</b>${g.line.startsWith('Can')?'?':'.'}`+(R[g.want].chem?` <span style="color:var(--dim)">(${R[g.want].chem})</span>`:''),
+    thanks:pick(['Perfect, exactly as ordered!','You just reasoned it out? Incredible.','You make it look so easy.','The guild thanks you, Alchemist.'])};
 }
 
 /* ───────────── UI ───────────── */
@@ -545,18 +638,21 @@ function renderTop(){
   $('streak').textContent=S.streak>1?`🔥 ${S.streak} in a row · XP ×${mult().toFixed(1)}`:'';
   $('bGrim').innerHTML='📖'+(nFound()>S.seen?'<span class="dot"></span>':'');
 }
+const elNames=r=>Object.keys(r.c).map(s=>`${EL[s].name} (${s})`).join(' + ');
+const autoDec=r=>(r.chem?`${r.name} is <b>${r.chem}</b>. `:'')+`Made of: ${elNames(r)}.`;
+const autoHow=r=>Object.keys(r.c).map(s=>`${s} has ${handsTxt(s)}`).join(', ')+`. ${r.n} atom${r.n>1?'s':''} in all.`+(r.odd?' 🃏 A rule-breaker!':'');
 function renderQuest(){
   const q=quest(),r=R[q.want];
   $('qface').textContent=q.face;
   $('qwho').innerHTML=q.who+(q.guild?' <span>· Guild board</span>':` <span>· ${CHAPTERS[chapOf(S.q)].place} · quest ${S.q+1} of ${QUESTS.length}</span>`);
   $('qask').innerHTML=q.ask;
-  let h='';
-  if(S.hint>=1)h='Made of: '+Object.keys(r.c).map(s=>EL[s].name).join(' + ')+` · ${r.n} atom${r.n>1?'s':''}`;
-  if(S.hint>=2)h+=`<br>Formula: <b>${r.f}</b>`;
-  if(!S.hint&&q.tip)h='💡 '+q.tip;
+  let h=q.tip&&!S.hint?'💡 '+q.tip:'';
+  if(S.hint>=1)h='🔍 '+(q.dec||autoDec(r));
+  if(S.hint>=2)h+='<br>🤝 '+(q.how||autoHow(r));
+  if(S.hint>=3)h+=`<br>📜 Formula: <b>${r.f}</b>`;
   $('qhint').innerHTML=h;
-  $('hintbtn').disabled=S.hint>=2;
-  $('hintbtn').textContent=S.hint===1?'🔍 Formula':'🔍 Appraise';
+  $('hintbtn').disabled=S.hint>=3;
+  $('hintbtn').textContent=['🔍 Read name','🤝 Count hands','📜 Formula','📜 Formula'][S.hint];
 }
 const chapOf=q=>{let c=0;CHAPTERS.forEach((ch,i)=>{if(q>=ch.at)c=i;});return c;};
 function renderJourney(){
@@ -567,8 +663,8 @@ function renderTray(fresh){
   const t=$('tray');t.innerHTML='';
   S.el.forEach((s,i)=>{
     const e=EL[s],b=document.createElement('button');
-    b.className='el'+(fresh&&fresh.includes(s)?' new':'');b.style.setProperty('--c',e.col);b.title=e.name+': '+e.fact;
-    b.innerHTML=`<span class="n">${e.n}</span><span class="s">${s}</span><span class="nm">${e.name}</span>`;
+    b.className='el'+(fresh&&fresh.includes(s)?' new':'');b.style.setProperty('--c',e.col);b.title=`${e.name} · ${handsTxt(s)}. ${e.fact}`;
+    b.innerHTML=`<span class="n">${e.n}</span><span class="h">${handDots(s)}</span><span class="s">${s}</span><span class="nm">${e.name}</span>`;
     b.onclick=()=>addAtom(s,i,b);t.appendChild(b);
   });
   if(S.el.length<SYMS.length){const b=document.createElement('div');b.className='el lock';b.title='Finish quests to unlock more elements';b.innerHTML='<span class="s" style="color:#fff8">🔒</span><span class="nm">quests</span>';t.appendChild(b);}
@@ -576,7 +672,12 @@ function renderTray(fresh){
 function renderReadout(){
   const r=$('readout');
   if(!atoms.length){r.className='empty';r.textContent='Tap elements below to drop atoms into the circle';}
-  else{r.className='';r.textContent=formulaOf(counts());}
+  else{const c=counts(),h=hands(c);let t;
+    if(h.ok)t=`<small class="ok">🤝 ${h.note||'every hand is held'}</small>`;
+    else if(h.noble)t='<small>🚫 noble gases have no hands to hold</small>';
+    else if(h.apart)t='<small>✂️ these would make separate pieces, not one molecule</small>';
+    else t=`<small>✋ ${h.free} empty hand${h.free>1?'s':''}</small>`;
+    r.className='';r.innerHTML=formulaOf(c)+t;}
 }
 function renderAll(){renderTop();renderJourney();renderQuest();renderTray();renderReadout();}
 
@@ -612,11 +713,14 @@ function fizzle(){
   if(noble){m=`${EL[noble].name} is a noble gas. It refuses to bond with anything, even itself. Try it completely alone!`;award('noble',chips);}
   else if(atoms.length===1&&PAIRS.includes(syms[0])){m=`A lone ${EL[syms[0]].name.toLowerCase()} atom hates being single. These atoms go around in pairs!`;award('lonely',chips);}
   else{
-    const need=Object.keys(want),extra=syms.filter(s=>!want[s]),miss=need.filter(s=>!c[s]);
-    if(!extra.length&&!miss.length)m='So close! Those are the right elements, but the amounts are off.';
-    else if(!extra.length)m='Good start, but the quest recipe needs another kind of element too.';
-    else if(S.hint||q.tip)m=`Hmm. The quest recipe does not use ${EL[extra[0]].name.toLowerCase()}.`;
-    else m=pick(FIZZLE);
+    const need=Object.keys(want),extra=syms.filter(s=>!want[s]),miss=need.filter(s=>!c[s]),h=hands(c);
+    const hm=h.ok?'Every hand is held, so it could be real, but this Grimoire does not know it.'
+      :h.apart?'Those atoms would split into separate pieces.'
+      :`${h.free} hand${h.free>1?'s were':' was'} left empty, so it fell apart.`;
+    if(!extra.length&&!miss.length)m='Right elements, wrong amounts. '+hm;
+    else if(!extra.length)m=hm+' The quest also needs another element.';
+    else if(S.hint||q.tip)m=hm+` (The quest does not use ${EL[extra[0]].name.toLowerCase()}.)`;
+    else m=hm;
   }
   if(S.fizz>=10)award('fizz',chips);
   chips.forEach(c=>toast(c[1]));
@@ -636,7 +740,8 @@ function success(key){
       if(q.rank&&q.rank>S.rank)S.rank=q.rank;
       ending=!!q.end;S.q++;
     }
-    if(S.hint<2){xp+=30;chips.push(['v','🧠 No-peek bonus +30 XP']);}
+    const bonus=[30,20,10][S.hint]||0;
+    if(bonus){xp+=bonus;chips.push(['v',S.hint?`🧠 Reasoning bonus +${bonus} XP`:`🧠 Worked it out alone +${bonus} XP`]);}
     S.hint=0;
   }
   xp=Math.round(xp*m);S.xp+=xp;S.gold+=gold;
@@ -660,14 +765,15 @@ function success(key){
   let h=`<div class="tag">${isNew?'✨ NEW DISCOVERY ✨':'QUEST COMPLETE'}</div>
     <div class="emo">${r.emo}</div><h2>${r.name}</h2><div class="bigf">${r.f}</div>
     <canvas id="mol" width="480" height="260" style="width:240px;height:130px"></canvas>
-    <p class="fact">${r.fact}</p>`;
+    <p class="fact">${r.fact}</p>
+    <p class="fact why">${r.odd?'🃏 <b>Rule-breaker!</b> '+r.odd:'🤝 <b>Why it holds:</b> '+(isQuest&&q.how?q.how:autoHow(r))}</p>`;
   if(isQuest)h+=`<div class="talk"><span class="f">${q.face}</span><span><b>${q.who}:</b> ${q.thanks}</span></div>`;
   if(isNew&&!isQuest)h+=`<p class="crowd">${pick(CROWD)}</p>`;
   h+=`<div class="chips">${chips.map((c,i)=>`<span class="chip ${c[0]}" style="animation-delay:${.25+i*.12}s">${c[1]}</span>`).join('')}</div>`;
   if(ending)h+=`<p>Through the Gate you can see your own street. Behind you: a dragon, a Demon Lord baking bread, and a Guild full of friends.<br><b>Home can wait.</b></p>
     <p style="font-size:13px;color:var(--dim)">🎉 Story complete! The Guild Board has endless requests, and ${TOTAL-n} recipe${TOTAL-n===1?' is':'s are'} still hidden in the Grimoire.</p>`;
   h+=`<button class="ok" id="okb">${isQuest&&!ending?'Next quest →':'Continue'}</button>`;
-  open(h,'',()=>{renderAll();if(newEl&&newEl.length){renderTray(newEl);say('New elements unlocked! Try them out.',true);}chapter();});
+  open(h,'',()=>{renderAll();if(newEl&&newEl.length){renderTray(newEl);say('New elements unlocked! Try them out.',true);}flow();});
   drawMol($('mol'),r.c);
   renderTop();
 }
@@ -686,44 +792,59 @@ function intro(page){
     ['throne','…and you land in another world','A magic kingdom has pulled you here to be its <b>hero</b>. A Demon Lord is choking the land with smoke, and they need you to stop him.'],
     ['crystal','They test your powers','No strength. No magic. The wizard calls you useless, and they send you away to a tiny village.'],
     ['atoms','But you have a secret power','You can see <b>atoms</b>, the tiny pieces everything is made of, and snap them together to make anything. Nobody else in this world can.'],
+    ['atoms','The one rule of Atom Sight','Every atom has a few <b>hands</b>: the little dots on its tile. Atoms join by holding hands, and a molecule only holds together when <b>no hand is left empty</b>. Read a thing\'s name, count the hands, and you can work out any recipe.'],
   ];
   const p=P[page],last=page===P.length-1;
   open(`${ART[p[0]]}<h2>${p[1]}</h2><p>${p[2]}</p>${last?'<p class="fact" style="text-align:center">🎯 <b>Reach the Demon Lord and stop the smoke.</b></p>':''}
-    <button class="ok" id="okb">${last?'Begin':'Next →'}</button>`,'',last?()=>{S.intro=true;save();chapter();}:()=>intro(page+1));
+    <button class="ok" id="okb">${last?'Begin':'Next →'}</button>`,'',last?()=>{S.intro=true;save();flow();}:()=>intro(page+1));
   if(last)sfx.win();
 }
 // Shows a chapter card: automatically the first time the story reaches a new place, or when asked for (idx)
 function chapter(idx){
   const again=idx!=null,over=S.q>=QUESTS.length;
-  if(over&&!again)return;
+  if(over&&!again)return false;
   const c=again?idx:chapOf(S.q);
-  if(!again){if(S.chap===c)return;S.chap=c;save();}
+  if(!again){if(S.chap===c)return false;S.chap=c;save();}
   const ch=CHAPTERS[c];
   open(`${ART[ch.art]}<div class="tag">CHAPTER ${c+1} · ${ch.place.toUpperCase()}</div><h2>${ch.title}</h2>
     <p>${ch.text}</p><p class="fact" style="text-align:center">🎯 <b>${ch.goal}</b></p>
-    <button class="ok" id="okb">${again?'Close':'Go →'}</button>`);
+    <button class="ok" id="okb">${again?'Close':'Go →'}</button>`,'',again?null:flow);
   if(!again)sfx.win();
+  return true;
+}
+const ruleHTML=r=>`<div class="rule"><b class="t">📜 ${r.t}</b><div class="ex">${r.ex}</div>${r.b}</div>`;
+const rulesOpen=()=>RULES.filter(r=>S.q>=QUESTS.length||S.q>=r.at);
+// After story beats: first a new chapter card if there is one, then any newly unlocked rules
+function flow(){
+  if(chapter())return;
+  const open_=rulesOpen();
+  if(open_.length>S.rules){
+    const fresh=open_.slice(S.rules);S.rules=open_.length;save();
+    open(`<div class="tag">NEW RULE${fresh.length>1?'S':''} OF ALCHEMY</div>${fresh.map(ruleHTML).join('')}
+      <p style="font-size:12px;color:var(--dim)">You can re-read every rule in the 📖 Grimoire.</p><button class="ok" id="okb">Got it</button>`,'wide');
+  }
 }
 function grimoire(tab){
   S.seen=nFound();save();renderTop();
   const n=nFound();
   let h=`<h2>📖 Grimoire</h2><div class="prog"><i style="width:${100*n/TOTAL}%"></i></div>
     <p style="font-size:13px;color:var(--dim);margin:4px 0">${n} of ${TOTAL} compounds discovered · ${S.el.length} of ${SYMS.length} elements</p>
-    <div class="tabs"><button id="t0" class="${tab?'':'on'}">Compounds</button><button id="t1" class="${tab?'on':''}">Elements</button></div><div class="grid">`;
-  if(!tab)for(const k of KEYS){
+    <div class="tabs"><button id="t0" class="${tab?'':'on'}">Compounds</button><button id="t1" class="${tab===1?'on':''}">Elements</button><button id="t2" class="${tab===2?'on':''}">📜 Rules</button></div><div class="${tab===2?'':'grid'}">`;
+  if(tab===2)h+=rulesOpen().map(ruleHTML).join('')+(rulesOpen().length<RULES.length?'<p style="color:var(--dim);font-size:13px">More rules unlock as the story goes on.</p>':'');
+  else if(!tab)for(const k of KEYS){
     const r=R[k],can=Object.keys(r.c).every(s=>S.el.includes(s));
     if(S.found[k])h+=`<div class="card"><span class="fm">${r.f}</span><b>${r.emo} ${r.name}</b><br>${r.fact}</div>`;
-    else if(can)h+=`<div class="card un"><span class="fm">?</span><b>❓ ${r.name}</b><br>Not discovered yet. It takes ${r.n} atom${r.n>1?'s':''}. Can you work out the recipe?</div>`;
+    else if(can)h+=`<div class="card un"><span class="fm">?</span><b>❓ ${r.name}</b><br>${r.chem?`Chemical name: <b>${r.chem}</b>. `:''}${r.n} atom${r.n>1?'s':''}.${r.odd?' 🃏 Breaks the hands rule.':''} Can you work it out?</div>`;
     else h+=`<div class="card un"><b>🔒 ???</b><br>Needs an element you have not unlocked.</div>`;
   }
   else for(const s of SYMS){
     const e=EL[s];
-    if(S.el.includes(s))h+=`<div class="card" style="border-color:${e.col}88"><span class="fm" style="color:${e.col}">${s}</span><b>${e.name}</b> · no. ${e.n}<br>${e.fact}</div>`;
+    if(S.el.includes(s))h+=`<div class="card" style="border-color:${e.col}88"><span class="fm" style="color:${e.col}">${s}</span><b>${e.name}</b> · no. ${e.n}<br><span style="color:var(--cyan)">✋ ${handsTxt(s)}</span><br>${e.fact}</div>`;
     else h+=`<div class="card un"><b>🔒 ???</b><br>Keep questing to unlock this element.</div>`;
   }
   h+=`</div><div style="text-align:center"><button class="ok" id="okb">Close</button></div>`;
   open(h,'wide');
-  $('t0').onclick=()=>grimoire(0);$('t1').onclick=()=>grimoire(1);
+  $('t0').onclick=()=>grimoire(0);$('t1').onclick=()=>grimoire(1);$('t2').onclick=()=>grimoire(2);
 }
 function status(){
   const l=lvlOf(S.xp);
@@ -859,7 +980,7 @@ cv.addEventListener('pointerdown',e=>{
 $('go').onclick=transmute;$('clear').onclick=clearAtoms;$('undo').onclick=()=>removeAtom(-1);
 $('journey').onclick=e=>{const i=e.target.dataset.i;if(!anim&&i!=null&&(S.q>=QUESTS.length||+i<=chapOf(S.q)))chapter(+i);};$('bGrim').onclick=()=>grimoire(0);$('bStat').onclick=status;
 $('bSnd').onclick=()=>{S.mute=!S.mute;save();renderTop();setMusicMute(S.mute);if(!S.mute)sfx.add(0);};
-$('hintbtn').onclick=()=>{if(S.hint<2){S.hint++;save();renderQuest();sfx.add(7);}};
+$('hintbtn').onclick=()=>{if(S.hint<3){S.hint++;save();renderQuest();sfx.add(7);}};
 addEventListener('keydown',e=>{
   const modal=!$('modal').classList.contains('hide');
   if(modal){if(e.key==='Escape'||e.key==='Enter'){e.preventDefault();const b=$('okb');if(b)b.click();}return;}
@@ -872,7 +993,7 @@ addEventListener('resize',resize);
 if(window.ResizeObserver)new ResizeObserver(resize).observe($('stage'));
 
 renderAll();resize();requestAnimationFrame(frame);
-if(!S.intro)intro(0);else chapter();
+if(!S.intro)intro(0);else flow();
 })();
 </script>
 </body>
