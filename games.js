@@ -14,4 +14,16 @@ window.SLOP_GAMES = [
     added: "2026-11-14",              // YYYY-MM-DD
     thumbnail: "games/moonbreach/moonbreach-thumbnail.jpeg"                     // optional: e.g. "games/moonbreach/thumb.png" (16:9)
   },
+  {
+    slug: "isekai-alchemist",
+    title: "Isekai Alchemist",
+    description: "You dozed off on your chemistry homework and woke up in a fantasy kingdom where nobody has heard of atoms. Combine real elements into real compounds to help villagers, soothe a dragon's toothache and become an SSS-rank legend.",
+    author: "SlopGames",
+    authorUrl: "",
+    madeWith: "Claude",
+    tags: ["puzzle", "educational", "relaxing", "mobile"],
+    controls: "Mouse or touch (Enter to transmute)",
+    added: "2026-11-14",
+    thumbnail: "games/isekai-alchemist/thumb.svg"
+  },
 ];

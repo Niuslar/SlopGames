@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>Isekai Alchemist</title>
+<style>
+  :root{--gold:#ffd166;--ink:#f3ecff;--dim:#b9a8e0;--panel:#241345;--line:#ffffff26;--cyan:#6fe3ff;--good:#8dffcf;--bad:#ff9d9d}
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;overflow:hidden;background:#12082a;color:var(--ink);
+    font-family:system-ui,-apple-system,"Segoe UI",sans-serif;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
+  button{font:inherit;color:inherit;cursor:pointer}
+  #app{height:100%;max-width:860px;margin:0 auto;display:flex;flex-direction:column;padding:8px 10px;gap:8px;
+    background:radial-gradient(ellipse at 50% 55%,#3a1a6e 0%,#1b0c3b 55%,#12082a 100%)}
+
+  /* top bar */
+  header{display:flex;align-items:center;gap:8px;font-variant-numeric:tabular-nums}
+  #rank{min-width:44px;height:38px;padding:0 8px;border-radius:9px;border:2px solid var(--gold);color:var(--gold);font-weight:800;font-size:18px;
+    display:flex;align-items:center;justify-content:center;background:#00000040;text-shadow:0 0 8px #ffd16688}
+  #lvbox{flex:1;min-width:0}
+  #lvtxt{font-size:12px;color:var(--dim);display:flex;justify-content:space-between;gap:6px;white-space:nowrap}
+  #lvtxt b{color:var(--ink)}
+  #xpbar{height:8px;border-radius:5px;background:#00000055;overflow:hidden;margin-top:3px}
+  #xpfill{height:100%;width:0;background:linear-gradient(90deg,#7b5cff,var(--cyan));transition:width .6s ease}
+  .stat{font-size:14px;font-weight:700;white-space:nowrap}
+  .ib{width:38px;height:38px;border-radius:9px;border:1px solid var(--line);background:#ffffff14;font-size:18px;padding:0;position:relative}
+  .ib:hover{background:#ffffff2a}
+  .ib .dot{position:absolute;top:-3px;right:-3px;width:10px;height:10px;border-radius:50%;background:var(--gold)}
+
+  /* quest */
+  #quest{display:flex;gap:10px;align-items:flex-start;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:9px 11px}
+  #qface{font-size:34px;line-height:1.1}
+  #qbody{flex:1;min-width:0;font-size:14px;line-height:1.4}
+  #qwho{font-weight:700;color:var(--gold);font-size:13px}
+  #qwho span{color:var(--dim);font-weight:400}
+  #qhint{margin-top:4px;font-size:13px;color:var(--cyan)}
+  #hintbtn{align-self:center;border:1px solid var(--cyan);color:var(--cyan);background:#6fe3ff14;border-radius:9px;padding:7px 9px;font-size:13px;white-space:nowrap}
+  #hintbtn:disabled{opacity:.35;cursor:default}
+
+  /* stage */
+  #stage{flex:1;min-height:150px;position:relative}
+  #cv{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none}
+  #readout{position:absolute;left:0;right:0;bottom:22px;text-align:center;font-size:22px;font-weight:700;letter-spacing:1px;pointer-events:none;text-shadow:0 2px 8px #000}
+  #readout.empty{font-size:14px;font-weight:400;color:var(--dim);letter-spacing:0}
+  #msg{position:absolute;left:0;right:0;bottom:0;text-align:center;font-size:13px;color:var(--bad);min-height:18px;pointer-events:none;text-shadow:0 1px 4px #000}
+  #streak{position:absolute;top:2px;right:4px;font-size:14px;font-weight:700;color:#ffb36b;pointer-events:none}
+
+  #actions{display:flex;gap:8px;justify-content:center}
+  #actions button{border-radius:11px;padding:10px 16px;font-size:15px;border:1px solid var(--line);background:#ffffff14}
+  #go{flex:0 1 260px;font-weight:800;font-size:17px!important;color:#2a1150!important;border:none!important;
+    background:linear-gradient(180deg,#ffe39a,#ffb938)!important;box-shadow:0 0 18px #ffd16655}
+  #go:active{transform:scale(.97)}
+
+  /* element tray */
+  #tray{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;padding-bottom:2px}
+  .el{width:clamp(44px,10.5vw,58px);height:clamp(48px,11.5vw,62px);border-radius:8px;border:2px solid var(--c);background:#00000050;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0;position:relative;transition:transform .08s}
+  .el:active{transform:scale(.9)}
+  .el .n{position:absolute;top:1px;left:4px;font-size:9px;color:var(--dim)}
+  .el .s{font-size:clamp(17px,4.4vw,22px);font-weight:800;color:var(--c);line-height:1;margin-top:5px}
+  .el .nm{font-size:8px;color:var(--dim);margin-top:2px;max-width:100%;overflow:hidden}
+  .el.new{animation:glow 1.2s ease-in-out 4}
+  .el.lock{border-style:dashed;border-color:var(--line);opacity:.6;cursor:default}
+  @keyframes glow{50%{box-shadow:0 0 16px var(--c);transform:scale(1.08)}}
+
+  /* modal */
+  #modal{position:fixed;inset:0;background:#080314cc;display:flex;align-items:center;justify-content:center;padding:12px;z-index:5}
+  #modal.hide{display:none}
+  #sheet{width:100%;max-width:480px;max-height:100%;overflow:auto;background:linear-gradient(180deg,#2f1860,#1d0e40);border:1px solid #ffffff33;
+    border-radius:16px;padding:18px;text-align:center;animation:rise .3s ease-out;box-shadow:0 10px 40px #000a}
+  #sheet.wide{max-width:720px;text-align:left}
+  #sheet.sys{background:linear-gradient(180deg,#0d2a4dee,#0a1c38ee);border:2px solid var(--cyan);box-shadow:0 0 30px #6fe3ff55;text-align:left}
+  @keyframes rise{from{opacity:0;transform:translateY(16px) scale(.96)}}
+  #sheet h2{margin:0 0 4px;font-size:22px}
+  #sheet h3{margin:14px 0 6px;font-size:14px;color:var(--cyan);text-transform:uppercase;letter-spacing:1px}
+  #sheet p{margin:8px 0;line-height:1.5;font-size:15px}
+  .tag{display:inline-block;font-size:12px;font-weight:800;letter-spacing:2px;color:var(--gold);margin-bottom:4px}
+  .bigf{font-size:34px;font-weight:800;color:var(--gold);text-shadow:0 0 14px #ffd16666}
+  .emo{font-size:46px;line-height:1.1}
+  .fact{background:#00000038;border-radius:10px;padding:9px 11px;font-size:14px!important;text-align:left}
+  .talk{display:flex;gap:9px;text-align:left;align-items:flex-start;font-size:14px;line-height:1.4;margin:10px 0}
+  .talk .f{font-size:30px;line-height:1}
+  .crowd{font-style:italic;color:var(--dim);font-size:13px!important}
+  .chips{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin:12px 0 4px}
+  .chip{font-size:13px;font-weight:700;padding:5px 10px;border-radius:99px;background:#ffffff1c;border:1px solid var(--line);animation:chip .4s ease-out backwards}
+  .chip.g{color:var(--gold);border-color:#ffd16677}.chip.c{color:var(--cyan);border-color:#6fe3ff77}.chip.v{color:var(--good);border-color:#8dffcf77}
+  @keyframes chip{from{opacity:0;transform:scale(.5)}}
+  .ok{margin-top:12px;border:none;border-radius:11px;padding:11px 28px;font-size:16px;font-weight:800;color:#2a1150;background:linear-gradient(180deg,#ffe39a,#ffb938)}
+  .tabs{display:flex;gap:6px;margin:8px 0 10px}
+  .tabs button{flex:1;padding:8px;border-radius:9px;border:1px solid var(--line);background:#ffffff10;font-size:14px}
+  .tabs button.on{background:#ffffff2e;border-color:var(--gold);color:var(--gold);font-weight:700}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:8px}
+  .card{background:#00000038;border:1px solid var(--line);border-radius:10px;padding:9px;font-size:12.5px;line-height:1.4}
+  .card b{font-size:14px}.card .fm{color:var(--gold);font-weight:800;float:right}
+  .card.un{opacity:.6}
+  .prog{height:10px;border-radius:6px;background:#00000055;overflow:hidden}
+  .prog i{display:block;height:100%;background:linear-gradient(90deg,var(--gold),#ff9d5c)}
+  .row{display:flex;justify-content:space-between;gap:10px;font-size:15px;padding:3px 0;border-bottom:1px dashed #6fe3ff33}
+  .row b{color:var(--cyan)}
+  .titles span{display:inline-block;margin:3px 4px 0 0;padding:3px 9px;border-radius:99px;font-size:12px;border:1px solid #6fe3ff66;color:var(--cyan)}
+  .ghost{background:none;border:1px solid var(--line);border-radius:9px;padding:7px 12px;font-size:13px;color:var(--dim);margin-top:12px}
+  #toasts{position:fixed;top:60px;left:0;right:0;display:flex;flex-direction:column;align-items:center;gap:6px;pointer-events:none;z-index:9}
+  .toast{font-size:16px;font-weight:800;padding:7px 16px;border-radius:99px;background:#0d2a4dee;border:1px solid var(--cyan);color:var(--cyan);
+    box-shadow:0 0 18px #6fe3ff55;animation:pop 2.6s ease-out forwards}
+  @keyframes pop{0%{opacity:0;transform:translateY(14px) scale(.8)}10%{opacity:1;transform:none}80%{opacity:1}100%{opacity:0;transform:translateY(-14px)}}
+  @media (max-width:520px){#xptxt{display:none}.el .nm{font-size:7px;letter-spacing:-.3px}#quest{padding:8px 9px}}
+  @media (max-height:560px){#qface{font-size:26px}#qbody{font-size:13px}.el .nm{display:none}}
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div id="rank" title="Adventurer rank">F</div>
+    <div id="lvbox">
+      <div id="lvtxt"><span>Level <b id="lv">1</b></span><span id="xptxt"></span></div>
+      <div id="xpbar"><div id="xpfill"></div></div>
+    </div>
+    <div class="stat" title="Gold">🪙 <span id="gold">0</span></div>
+    <button class="ib" id="bGrim" title="Grimoire" aria-label="Grimoire">📖</button>
+    <button class="ib" id="bStat" title="Status window" aria-label="Status window">🪪</button>
+    <button class="ib" id="bSnd" title="Sound" aria-label="Sound">🔊</button>
+  </header>
+
+  <section id="quest">
+    <div id="qface"></div>
+    <div id="qbody"><div id="qwho"></div><div id="qask"></div><div id="qhint"></div></div>
+    <button id="hintbtn">🔍 Appraise</button>
+  </section>
+
+  <main id="stage">
+    <canvas id="cv"></canvas>
+    <div id="streak"></div>
+    <div id="readout" class="empty"></div>
+    <div id="msg"></div>
+  </main>
+
+  <div id="actions">
+    <button id="undo" aria-label="Remove last atom">⌫</button>
+    <button id="go">✨ Transmute!</button>
+    <button id="clear">Clear</button>
+  </div>
+  <div id="tray"></div>
+</div>
+<div id="modal" class="hide"><div id="sheet"></div></div>
+<div id="toasts"></div>
+
+<script>
+(()=>{
+'use strict';
+const $=id=>document.getElementById(id);
+const TAU=Math.PI*2, MAX_ATOMS=8;
+const SUB='₀₁₂₃₄₅₆₇₈₉';
+const sub=s=>s.replace(/\d/g,d=>SUB[d]);
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+
+/* ───────────── Elements ─────────────
+   n = atomic number, col = orb colour, r = drawing size. Listed in the order the story unlocks them. */
+const EL={
+  H :{n:1, name:'Hydrogen', col:'#f2f6ff',r:.62,fact:'The lightest element, and the most common one in the universe. Stars are giant balls of it.'},
+  O :{n:8, name:'Oxygen',   col:'#ff5a5a',r:.82,fact:'About a fifth of the air. Animals need it to breathe, and fire needs it to burn.'},
+  C :{n:6, name:'Carbon',   col:'#8f96a8',r:.86,fact:'The building block of life. Every plant, animal and person is built around carbon.'},
+  Na:{n:11,name:'Sodium',   col:'#b48cff',r:1.08,fact:'A metal so soft you could cut it with a butter knife. It fizzes violently in water.'},
+  Cl:{n:17,name:'Chlorine', col:'#5fe36a',r:.96,fact:'A poisonous green-yellow gas on its own, yet it is half of ordinary table salt.'},
+  N :{n:7, name:'Nitrogen', col:'#5b8cff',r:.84,fact:'Makes up about 78% of the air you are breathing right now.'},
+  Ca:{n:20,name:'Calcium',  col:'#d9e2c4',r:1.12,fact:'The metal in your bones and teeth, and in seashells and chalk.'},
+  Fe:{n:26,name:'Iron',     col:'#e08a4f',r:1.04,fact:'Strong and magnetic. Its symbol comes from the Latin word "ferrum". Earth\'s core is mostly iron.'},
+  S :{n:16,name:'Sulfur',   col:'#ffe14d',r:.96,fact:'A yellow solid found near volcanoes. Many of its compounds are famously stinky.'},
+  Si:{n:14,name:'Silicon',  col:'#d8b98a',r:1,  fact:'Found in sand and most rocks. Computer chips are made from it.'},
+  Al:{n:13,name:'Aluminium',col:'#c9d3e0',r:1,  fact:'A light, strong metal used for drinks cans, kitchen foil and aeroplanes.'},
+  He:{n:2, name:'Helium',   col:'#8ff3ff',r:.62,fact:'A noble gas: it refuses to bond with anything. It is lighter than air, so helium balloons float.'},
+  Ne:{n:10,name:'Neon',     col:'#ff8fb1',r:.76,fact:'A noble gas that glows red-orange when electricity passes through it.'},
+  K :{n:19,name:'Potassium',col:'#c58cf0',r:1.16,fact:'A soft metal that plants and your nerves both need. Its symbol comes from the Latin "kalium".'},
+  Mg:{n:12,name:'Magnesium',col:'#9be88a',r:1.04,fact:'A light metal that burns with a dazzling white flame. Plants need it to be green.'},
+  Cu:{n:29,name:'Copper',   col:'#f09a62',r:1.04,fact:'A reddish metal that carries electricity brilliantly. Symbol from the Latin "cuprum".'},
+  Ag:{n:47,name:'Silver',   col:'#e6ebf2',r:1.1, fact:'A shiny precious metal. Its symbol comes from the Latin "argentum".'},
+  F :{n:9, name:'Fluorine', col:'#b8f29a',r:.76,fact:'The most reactive element of all. Tamed inside toothpaste, it protects your teeth.'},
+  Au:{n:79,name:'Gold',     col:'#ffd23f',r:1.1, fact:'It never rusts or tarnishes. Its symbol comes from the Latin "aurum".'},
+};
+const START=['H','O','C'];
+const SYMS=Object.keys(EL);
+const NOBLE=['He','Ne'], PAIRS=['H','O','N','Cl','F'];
+// Rough order for writing a formula the player has not discovered yet
+const FORDER=['Na','K','Mg','Ca','Al','Fe','Cu','Ag','Au','Si','C','N','H','S','Cl','F','O','He','Ne'];
+
+/* ───────────── Compounds ─────────────
+   rec(atoms, formula, name, emoji, fact). Every formula is a real substance. */
+const R={}, BYF={};
+const keyOf=c=>Object.keys(c).sort().map(s=>s+c[s]).join('');
+function rec(atoms,f,name,emo,fact){
+  const c={};let n=0;
+  for(const t of atoms.split(' ')){const m=/^([A-Z][a-z]?)(\d*)$/.exec(t);const k=+m[2]||1;c[m[1]]=(c[m[1]]||0)+k;n+=k;}
+  const key=keyOf(c);R[key]={key,c,n,f:sub(f),name,emo,fact};BYF[f]=key;
+}
+rec('H2 O','H2O','Water','💧','Two hydrogen atoms holding on to one oxygen. Water covers about 71% of Earth and makes up more than half of you.');
+rec('H2','H2','Hydrogen gas','🚀','Hydrogen atoms travel in pairs. It is the lightest gas there is, and it is used as rocket fuel.');
+rec('O2','O2','Oxygen gas','🌬️','The oxygen we breathe is two oxygen atoms joined together. Fires burn hotter when they get more of it.');
+rec('O3','O3','Ozone','🛡️','Three oxygen atoms. A layer of ozone high in the sky shields Earth from the Sun\'s harmful ultraviolet rays.');
+rec('C O2','CO2','Carbon dioxide','🫧','The bubbles in fizzy drinks. You breathe it out, and plants take it in.');
+rec('C O','CO','Carbon monoxide','⚠️','Just one oxygen fewer than CO₂, but a dangerous invisible gas. That is why homes have carbon monoxide alarms.');
+rec('C H4','CH4','Methane','🔥','The natural gas burned in cookers and heaters. Cows burp out a lot of it!');
+rec('H2 O2','H2O2','Hydrogen peroxide','🩹','Water with one extra oxygen. It fizzes when it touches a cut and is used as a disinfectant.');
+rec('C','C','Graphite','✏️','Pure carbon in soft, slippery sheets. It is the "lead" in your pencil.');
+rec('C8','C','Diamond','💎','Pure carbon again, but squeezed so hard that the atoms lock into the hardest natural material known. Same element, different arrangement!');
+rec('C2 H4 O2','CH3COOH','Vinegar acid','🥗','Acetic acid, the sour part of vinegar. Lovely on chips, and good at cleaning kettles.');
+rec('H2 C O3','H2CO3','Carbonic acid','🥤','Made when CO₂ dissolves in water. It gives fizzy drinks their slight tang.');
+rec('Na Cl','NaCl','Table salt','🧂','A fizzing metal plus a poisonous gas makes… the stuff you sprinkle on chips. A compound can be nothing like the elements inside it!');
+rec('H Cl','HCl','Hydrochloric acid','🧪','A strong acid. Your own stomach makes it to help digest food.');
+rec('Na O H','NaOH','Lye','🧼','Sodium hydroxide, a strong base (the opposite of an acid). Cooked with fats, it turns into soap.');
+rec('Cl2','Cl2','Chlorine gas','☁️','Chlorine atoms pair up into a green-yellow gas. Chlorine compounds keep swimming pools clean.');
+rec('Na H C O3','NaHCO3','Baking soda','🧁','When it is heated or meets an acid it lets go of CO₂ bubbles, and those bubbles make cakes rise.');
+rec('Na Cl O','NaClO','Bleach','🧴','Sodium hypochlorite. It removes stains and kills germs.');
+rec('N2','N2','Nitrogen gas','🌫️','Most of the air is nitrogen atoms in pairs. They hold each other so tightly that they hardly react with anything.');
+rec('N H3','NH3','Ammonia','🌱','A sharp-smelling gas that gets turned into fertiliser, which helps feed billions of people.');
+rec('N2 O','N2O','Laughing gas','😂','Nitrous oxide. Dentists use it to help patients relax.');
+rec('N O2','NO2','Nitrogen dioxide','🏭','A brown gas found in car exhaust and city smog.');
+rec('H N O3','HNO3','Nitric acid','⚗️','A powerful acid. Medieval alchemists called it "aqua fortis", meaning strong water.');
+rec('Ca O','CaO','Quicklime','🏗️','Made by roasting limestone. It gets very hot when water is added, and it is a key ingredient of cement.');
+rec('Ca C O3','CaCO3','Limestone','🏛️','Calcium carbonate. Chalk, marble, seashells and eggshells are all made of it.');
+rec('Ca O2 H2','Ca(OH)2','Slaked lime','🧱','Quicklime plus water. Builders have used it in mortar and plaster for thousands of years.');
+rec('Ca Cl2','CaCl2','Calcium chloride','❄️','A salt that is spread on icy roads to melt the ice.');
+rec('Ca S O4','CaSO4','Gypsum','🩼','Calcium sulfate, the mineral behind plaster. It is what casts for broken arms were made from.');
+rec('Ca F2','CaF2','Fluorite','🔮','A colourful crystal that glows under ultraviolet light. The word "fluorescent" is named after it.');
+rec('Fe','Fe','Iron','🗡️','Pure iron: strong, magnetic and perfect for swords and horseshoes.');
+rec('Fe2 O3','Fe2O3','Rust','🟤','Iron slowly joins with oxygen from damp air. Rust is also what makes the planet Mars red.');
+rec('Fe S2','FeS2','Fool\'s gold','✨','Pyrite. It is shiny and golden, but it is only iron and sulfur. It has fooled many treasure hunters.');
+rec('Fe3 O4','Fe3O4','Magnetite','🧲','A naturally magnetic rock. Early sailors used pieces of it to make the first compasses.');
+rec('S','S','Sulfur','🌋','Yellow crystals found around volcanoes. Old books call it brimstone.');
+rec('S O2','SO2','Sulfur dioxide','💨','A choking gas that volcanoes puff out.');
+rec('H2 S','H2S','Rotten-egg gas','🥚','Hydrogen sulfide. It is the reason rotten eggs smell so awful.');
+rec('H2 S O4','H2SO4','Sulfuric acid','🔋','One of the most widely used chemicals in the world. It is the acid inside car batteries.');
+rec('Si','Si','Silicon','💻','Pure silicon is sliced into the chips that run every computer and phone.');
+rec('Si O2','SiO2','Quartz','🏖️','Silicon dioxide. Sand is mostly this, and when you melt it you get glass.');
+rec('Si C','SiC','Carborundum','🪨','Silicon carbide, nearly as hard as diamond. It is the grit on sandpaper and grinding wheels.');
+rec('Al','Al','Aluminium','🥫','Pure aluminium: light, strong and easy to recycle again and again.');
+rec('Al2 O3','Al2O3','Ruby','❤️','Aluminium oxide crystals are called corundum. A pinch of chromium turns them into red rubies; other traces make blue sapphires.');
+rec('He','He','Helium','🎈','A noble gas is happy on its own, so one atom is all you need. It is lighter than air, which makes balloons float.');
+rec('Ne','Ne','Neon','🌟','Another noble gas that never bonds. Run electricity through it and it glows red-orange.');
+rec('K N O3','KNO3','Saltpetre','🌹','Potassium nitrate. It is a plant fertiliser, and it also gives fireworks their whoosh.');
+rec('K Cl','KCl','Potassium chloride','🍌','A cousin of table salt. It is used in fertiliser and in "low-sodium" salt.');
+rec('Mg O','MgO','Magnesia','🤍','The white powder left behind when magnesium burns. It can take enormous heat, so it is used to line furnaces.');
+rec('Mg S O4','MgSO4','Epsom salt','🛁','Magnesium sulfate. People dissolve it in a warm bath to soothe tired muscles.');
+rec('Mg O2 H2','Mg(OH)2','Milk of magnesia','🥛','A gentle base. It cancels out extra stomach acid. When an acid and a base cancel each other, that is called neutralisation.');
+rec('Cu','Cu','Copper','🪙','Pure copper. Electric wires are made from it, and so were some of the very first metal tools.');
+rec('Cu O','CuO','Copper oxide','⚫','A black powder that forms when copper is heated in air. Potters use it to colour glazes green and blue.');
+rec('Cu S O4','CuSO4','Blue vitriol','🔷','Copper sulfate. With a little water it grows into brilliant blue crystals.');
+rec('Ag','Ag','Silver','🥈','Pure silver, the best conductor of electricity of any metal.');
+rec('Ag2 S','Ag2S','Tarnish','🌑','The dark coating on old silver spoons is silver that has joined with sulfur from the air.');
+rec('Na F','NaF','Sodium fluoride','🦷','The tooth-protecting ingredient in many toothpastes.');
+rec('Au','Au','Gold','👑','Gold is an element, so chemistry cannot make it out of anything else. Alchemists spent centuries trying!');
+BYF.C8=keyOf({C:8});R[BYF.C8].f='C (×8)';BYF.C=keyOf({C:1});
+const KEYS=Object.keys(R), TOTAL=KEYS.length;
+
+/* ───────────── Story ───────────── */
+const RANKS=['F','E','D','C','B','A','S','SS','SSS'];
+const Q=(who,face,ask,want,thanks,extra)=>Object.assign({who,face,ask,want:BYF[want],thanks},extra);
+const QUESTS=[
+  Q('Farmer Barley','👨‍🌾','The village well has run dry and my turnips are wilting! If only someone could make <b>WATER</b> out of thin air…','H2O',
+    'Water! From NOTHING! Are you some kind of archmage?!',{tip:'Water is H₂O: tap <b>H</b> twice and <b>O</b> once, then Transmute.',title:'Well Whisperer'}),
+  Q('Blacksmith Brunhild','👩‍🏭','My forge fire is too weak to melt iron. Fire needs the "breath of air" to burn hot. Can you bottle some <b>OXYGEN GAS</b>?','O2',
+    'The flames are roaring! You bottled the wind itself!',{tip:'Oxygen atoms never float around alone.'}),
+  Q('Innkeeper Hobb','🧔','The harvest festival is tomorrow and my drinks are flat. I need the gas that makes bubbles: <b>CARBON DIOXIDE</b>!','CO2',
+    'It fizzes! It tickles my nose! Witchcraft! …Delicious witchcraft.',{unlock:['Na','Cl'],rank:1,tip:'"Di" means two.'}),
+  Q('Cook Marla','👩‍🍳','My soup tastes of nothing at all. Legends speak of a white crystal called <b>SALT</b>…','NaCl',
+    'A fizzing metal and a poison gas made… seasoning?! I will never understand alchemy.',{unlock:['N']}),
+  Q('Farmer Barley','👨‍🌾','The soil is tired. My grandmother swore by smelly <b>AMMONIA</b> to feed the fields.','NH3',
+    'Phew, what a stink! But look at those turnips GROW!'),
+  Q('Baker Pim','🧑‍🍳','My cakes come out as flat as shields. I need <b>BAKING SODA</b> to make them rise!','NaHCO3',
+    'It is fluffy! It is HUGE! This cake is taller than I am!',{tip:'Six atoms. Its science name is sodium hydrogen carbonate.'}),
+  Q('Soapmaker Odo','🧖','The whole village is rather… fragrant. To make soap I need <b>LYE</b>, also called sodium hydroxide.','NaOH',
+    'Soap for everyone! The kingdom shall smell of lavender!',{unlock:['Ca'],rank:2}),
+  Q('Mason Grit','👷','Goblins knocked down the town wall. I need blocks of <b>LIMESTONE</b>. Scholars call it calcium carbonate.','CaCO3',
+    'Solid as a rock! Because it is a rock!',{tip:'A "carbonate" is one carbon with three oxygens.'}),
+  Q('Healer Sana','🧝‍♀️','The knights keep scraping their knees. I need <b>HYDROGEN PEROXIDE</b> to clean their wounds.','H2O2',
+    'It bubbles on the scrape! The knights are crying, but they are clean.',{unlock:['Fe','S'],tip:'It is water with one extra oxygen.'}),
+  Q('Captain Rook','💂','A CURSE! My sword has turned red and crumbly! …You say it is only "<b>RUST</b>"? Prove it. Make some yourself.','Fe2O3',
+    'So it is just iron and oxygen… and I only had to dry my sword. How embarrassing.',{tip:'Two iron atoms, and more oxygens than irons.'}),
+  Q('Merchant Finn','🧑‍💼','I bought a whole cart of gold for three coppers! …Why are you looking at me like that? Show me what this "<b>FOOL\'S GOLD</b>" is made of.','FeS2',
+    'Iron and sulfur?! I have been swindled!',{unlock:['Si','Al'],rank:3}),
+  Q('Glassmaker Vitra','👩‍🎨','I want to give the chapel proper windows, but I have no <b>QUARTZ</b> sand to melt into glass.','SiO2',
+    'So clear! You can see right through it! What do you mean, "that is the point"?'),
+  Q('Princess Rubia','👸','I dropped my favourite <b>RUBY</b> down a dragon hole. Father says alchemists can make anything…','Al2O3',
+    'It is even shinier than the old one! I name you Royal Alchemist!',{unlock:['He','Ne'],rank:4,tip:'A ruby is aluminium oxide: two aluminiums, three oxygens.'}),
+  Q('Little Tobi','🧒','Excuse me, Alchemist! My balloon just sits on the floor. Do you know a gas lighter than air? Maybe <b>HELIUM</b>?','He',
+    'It is flying! IT IS FLYING! …It is gone. Can I have another one?',{tip:'Noble gases prefer to be alone. Completely alone.'}),
+  Q('Innkeeper Hobb','🧔','I want a sign that glows at night so travellers can find my inn. They say <b>NEON</b> shines when lightning touches it.','Ne',
+    'It glows! Every moth in the kingdom is now my customer!',{unlock:['K','Mg']}),
+  Q('Gardener Fern','🧑‍🌾','The Queen\'s roses are drooping. I need <b>SALTPETRE</b>, which is potassium nitrate, to feed them.','KNO3',
+    'They are blooming! One of them just bit me, but they are blooming!',{tip:'A "nitrate" is one nitrogen with three oxygens.'}),
+  Q('Captain Rook','💂','I wrestled a troll all day and everything hurts. A bath of <b>EPSOM SALT</b> would save me. It is magnesium sulfate.','MgSO4',
+    'Aaaah. I may never leave this bath.',{unlock:['Cu','Ag','F'],rank:5,tip:'A "sulfate" is one sulfur with four oxygens.'}),
+  Q('Court Wizard Zeb','🧙‍♂️','My staff needs a crystal of the deepest blue. Only <b>BLUE VITRIOL</b> will do. That is copper sulfate. Not that I am jealous of your powers.','CuSO4',
+    'Magnificent. I studied magic for sixty years and you just… tap things.'),
+  Q('Ember the Dragon','🐉','ROOOAR! …Sorry. Toothache. Too many sweets. Do you have anything that protects teeth? <b>SODIUM FLUORIDE</b>, maybe?','NaF',
+    'Minty! I shall brush twice a day. All eighty teeth.',{title:'Dragon Dentist'}),
+  Q('Queen Aurelia','🫅','The sky-shield above Elementia is tearing, and the sun scorches our fields. The old scrolls call the shield <b>OZONE</b>.','O3',
+    'The sky is healed! Ordinary oxygen with one more atom… who would have guessed?',{rank:6,tip:'Like oxygen gas, plus one.'}),
+  Q('The Demon Lord','😈','MORTAL! I have terrorised this land for 300 years because… my stomach BURNS. Too much acid! Bring me <b>MILK OF MAGNESIA</b> or face my wrath!','Mg(OH)2',
+    'The burning… it is gone. I am not angry any more. Perhaps I will open a bakery. Here, take my treasure.',{unlock:['Au'],rank:7,title:'Heartburn Hero',tip:'Magnesium with two "OH" groups. A base cancels an acid.'}),
+  Q('King Aurum','🤴','You saved the kingdom! One last request: my crown needs <b>GOLD</b>. Surely the great alchemist can make it out of turnips?','Au',
+    'It cannot be made from turnips? Or lead? Or anything?! Hmph. You are still the greatest hero in history.',{title:'Hero of Elementia',end:true,tip:'Gold is an element. Nothing else can become it. Luckily, the Demon Lord just gave you some.'}),
+];
+const CROWD=[
+  '"They did not even chant a spell!"','The guild clerk faints.','"Is that SS-rank magic?!" "No. It is chemistry."','A bard starts writing a song about you.',
+  '"No magic circle… wait, there IS a magic circle. But still!"','"Mummy, I want to be an alchemist!"','The village elder drops his staff.',
+  '"Impossible! That takes ten wizards and a week!"','Someone in the crowd whispers: "…what is an atom?"','A passing knight applauds so hard his gauntlet falls off.',
+];
+const FIZZLE=['Pfffft. The atoms shrug and drift apart.','Fizzle! That is not a recipe this grimoire knows.','A sad little puff of smoke. Try another mix.','The circle hums… and gives up.','Nope! But failed experiments are how real scientists learn.'];
+const GUILD=[['Guild Clerk Mina','👩‍💼'],['A hooded traveller','🧙'],['Sir Dandelion','🤺'],['Granny Willow','👵'],['Apprentice Pip','🧑‍🎓'],['A talking cat','🐈']];
+const TITLES={start:'Reincarnated Student',noble:'Noble Effort',lonely:'Lonely Atoms',fizz:'Fizzle Master',roll:'On a Roll',diamond:'Diamond Hands',
+  free:'Free Thinker',table:'Walking Periodic Table',half:'Scholar of Elementia',all:'Grand Alchemist'};
+
+/* ───────────── Save ───────────── */
+const SAVE='isekai-alchemist-v1';
+const fresh=()=>({el:START.slice(),found:{},q:0,xp:0,gold:0,streak:0,best:0,fizz:0,free:0,rank:0,titles:[TITLES.start],hint:0,guild:null,done:0,mute:false,intro:false,seen:0});
+let S=fresh();
+try{const d=JSON.parse(localStorage.getItem(SAVE));if(d&&Array.isArray(d.el))S=Object.assign(fresh(),d);}catch(e){}
+const save=()=>{try{localStorage.setItem(SAVE,JSON.stringify(S));}catch(e){}};
+const nFound=()=>KEYS.filter(k=>S.found[k]).length;
+const lvlOf=xp=>Math.floor(Math.sqrt(xp/80))+1, lvlStart=l=>80*(l-1)*(l-1);
+
+/* ───────────── Sound ───────────── */
+let AC=null;
+function tone(f,at,d,type,v){
+  if(S.mute)return;
+  try{
+    AC=AC||new (window.AudioContext||window.webkitAudioContext)();
+    if(AC.state==='suspended')AC.resume();
+    const o=AC.createOscillator(),g=AC.createGain(),t=AC.currentTime+at;
+    o.type=type||'sine';o.frequency.setValueAtTime(f,t);
+    g.gain.setValueAtTime(v||.1,t);g.gain.exponentialRampToValueAtTime(.001,t+d);
+    o.connect(g);g.connect(AC.destination);o.start(t);o.stop(t+d);
+  }catch(e){}
+}
+const sfx={
+  add:i=>tone(260*Math.pow(2,(i%12)/12),0,.18,'triangle',.12),
+  rem:()=>tone(180,0,.1,'triangle',.08),
+  charge:()=>{for(let i=0;i<8;i++)tone(200+i*70,i*.08,.1,'sine',.06);},
+  win:()=>[523,659,784,1047].forEach((f,i)=>tone(f,i*.09,.35,'triangle',.13)),
+  disc:()=>[523,659,784,1047,1319,1568].forEach((f,i)=>tone(f,i*.08,.45,'triangle',.13)),
+  fail:()=>{tone(220,0,.25,'sawtooth',.06);tone(150,.12,.35,'sawtooth',.06);},
+  lvl:()=>[392,523,659,784,1047].forEach((f,i)=>tone(f,.5+i*.11,.4,'square',.05)),
+};
+
+/* ───────────── Circle state ───────────── */
+let atoms=[];           // {s,x,y} in the transmutation circle
+let anim=null;          // {t,ok,key} while transmuting
+let shake=0, flash=0, parts=[];
+const counts=()=>{const c={};for(const a of atoms)c[a.s]=(c[a.s]||0)+1;return c;};
+
+function quest(){
+  if(S.q<QUESTS.length)return QUESTS[S.q];
+  if(!S.guild){
+    const known=KEYS.filter(k=>S.found[k]&&k!==S.lastGuild);
+    const g=pick(GUILD),k=pick(known);
+    S.guild={who:g[0],face:g[1],want:k,line:pick(['We have run out of','A customer is begging for','The guild needs another batch of','Quick! Somebody ordered','Do you remember how to make'])};
+    S.lastGuild=k;save();
+  }
+  const g=S.guild;
+  return {who:g.who,face:g.face,want:g.want,guild:true,ask:`${g.line} <b>${R[g.want].name.toUpperCase()}</b>${g.line.startsWith('Do')?'?':'.'}`,
+    thanks:pick(['Perfect, exactly as ordered!','From memory, too! Incredible.','You make it look so easy.','The guild thanks you, Alchemist.'])};
+}
+
+/* ───────────── UI ───────────── */
+function say(t,good){$('msg').textContent=t||'';$('msg').style.color=good?'var(--good)':'';}
+function toast(t){const d=document.createElement('div');d.className='toast';d.textContent=t;$('toasts').appendChild(d);setTimeout(()=>d.remove(),2700);}
+
+function formulaOf(c){
+  const k=keyOf(c);
+  if(R[k]&&S.found[k]&&k!==BYF.C8)return R[k].f;
+  return FORDER.filter(s=>c[s]).map(s=>s+(c[s]>1?SUB[c[s]]:'')).join('');
+}
+function renderTop(){
+  const l=lvlOf(S.xp),a=lvlStart(l),b=lvlStart(l+1);
+  $('rank').textContent=RANKS[S.rank];
+  $('lv').textContent=l;$('xptxt').textContent=`${S.xp-a} / ${b-a} XP`;
+  $('xpfill').style.width=(100*(S.xp-a)/(b-a))+'%';
+  $('gold').textContent=S.gold;
+  $('bSnd').textContent=S.mute?'🔇':'🔊';
+  $('streak').textContent=S.streak>1?`🔥 ${S.streak} in a row · XP ×${mult().toFixed(1)}`:'';
+  $('bGrim').innerHTML='📖'+(nFound()>S.seen?'<span class="dot"></span>':'');
+}
+function renderQuest(){
+  const q=quest(),r=R[q.want];
+  $('qface').textContent=q.face;
+  $('qwho').innerHTML=q.who+(q.guild?' <span>· Guild board</span>':` <span>· Quest ${S.q+1} of ${QUESTS.length}</span>`);
+  $('qask').innerHTML=q.ask;
+  let h='';
+  if(S.hint>=1)h='Made of: '+Object.keys(r.c).map(s=>EL[s].name).join(' + ')+` · ${r.n} atom${r.n>1?'s':''}`;
+  if(S.hint>=2)h+=`<br>Formula: <b>${r.f}</b>`;
+  if(!S.hint&&q.tip)h='💡 '+q.tip;
+  $('qhint').innerHTML=h;
+  $('hintbtn').disabled=S.hint>=2;
+  $('hintbtn').textContent=S.hint===1?'🔍 Formula':'🔍 Appraise';
+}
+function renderTray(fresh){
+  const t=$('tray');t.innerHTML='';
+  S.el.forEach((s,i)=>{
+    const e=EL[s],b=document.createElement('button');
+    b.className='el'+(fresh&&fresh.includes(s)?' new':'');b.style.setProperty('--c',e.col);b.title=e.name+': '+e.fact;
+    b.innerHTML=`<span class="n">${e.n}</span><span class="s">${s}</span><span class="nm">${e.name}</span>`;
+    b.onclick=()=>addAtom(s,i,b);t.appendChild(b);
+  });
+  if(S.el.length<SYMS.length){const b=document.createElement('div');b.className='el lock';b.title='Finish quests to unlock more elements';b.innerHTML='<span class="s" style="color:#fff8">🔒</span><span class="nm">quests</span>';t.appendChild(b);}
+}
+function renderReadout(){
+  const r=$('readout');
+  if(!atoms.length){r.className='empty';r.textContent='Tap elements below to drop atoms into the circle';}
+  else{r.className='';r.textContent=formulaOf(counts());}
+}
+function renderAll(){renderTop();renderQuest();renderTray();renderReadout();}
+
+function addAtom(s,i,btn){
+  if(anim)return;
+  if(atoms.length>=MAX_ATOMS){say(`The circle holds ${MAX_ATOMS} atoms at most.`);return;}
+  let x=W/2,y=H;
+  if(btn){const a=btn.getBoundingClientRect(),c=cv.getBoundingClientRect();x=a.left+a.width/2-c.left;y=a.top-c.top;}
+  atoms.push({s,x,y});sfx.add(i);say('');renderReadout();
+}
+function removeAtom(i){if(anim||!atoms.length)return;atoms.splice(i<0?atoms.length-1:i,1);sfx.rem();say('');renderReadout();}
+function clearAtoms(){if(anim)return;atoms=[];say('');renderReadout();}
+
+/* ───────────── Transmutation ───────────── */
+const mult=()=>1+Math.min(Math.max(S.streak-1,0),5)*.1;
+function transmute(){
+  if(anim||!$('modal').classList.contains('hide'))return;
+  if(!atoms.length){say('The circle is empty. Tap an element first!');return;}
+  const key=keyOf(counts());
+  anim={t:0,ok:!!R[key],key};sfx.charge();say('');
+}
+function award(id,chips){
+  const t=TITLES[id]||id;
+  if(S.titles.includes(t))return;
+  S.titles.push(t);chips.push(['c','🏅 Title: '+t]);
+}
+function fizzle(){
+  const c=counts(),syms=Object.keys(c),q=quest(),want=R[q.want].c,chips=[];
+  S.streak=0;S.fizz++;sfx.fail();shake=.45;
+  for(let i=0;i<26;i++){const a=Math.random()*TAU,v=30+Math.random()*90;parts.push({x:W/2,y:cy(),vx:Math.cos(a)*v,vy:Math.sin(a)*v-30,life:1,max:1,col:'#9a93ad',r:5+Math.random()*7});}
+  let m;
+  const noble=syms.find(s=>NOBLE.includes(s));
+  if(noble){m=`${EL[noble].name} is a noble gas. It refuses to bond with anything, even itself. Try it completely alone!`;award('noble',chips);}
+  else if(atoms.length===1&&PAIRS.includes(syms[0])){m=`A lone ${EL[syms[0]].name.toLowerCase()} atom hates being single. These atoms go around in pairs!`;award('lonely',chips);}
+  else{
+    const need=Object.keys(want),extra=syms.filter(s=>!want[s]),miss=need.filter(s=>!c[s]);
+    if(!extra.length&&!miss.length)m='So close! Those are the right elements, but the amounts are off.';
+    else if(!extra.length)m='Good start, but the quest recipe needs another kind of element too.';
+    else if(S.hint||q.tip)m=`Hmm. The quest recipe does not use ${EL[extra[0]].name.toLowerCase()}.`;
+    else m=pick(FIZZLE);
+  }
+  if(S.fizz>=10)award('fizz',chips);
+  chips.forEach(c=>toast(c[1]));
+  say(m);renderTop();save();
+}
+function success(key){
+  const r=R[key],isNew=!S.found[key],q=quest(),isQuest=q.want===key,chips=[];
+  const before=lvlOf(S.xp);let xp=0,gold=0,newEl=null,ending=false;
+  S.streak++;S.best=Math.max(S.best,S.streak);
+  const m=mult();
+  if(isNew){S.found[key]=1;xp+=40+10*r.n;gold+=10;if(!isQuest)S.free++;}else xp+=5;
+  if(isQuest){
+    if(q.guild){xp+=40;gold+=25;S.done++;S.guild=null;}
+    else{
+      xp+=100+10*S.q;gold+=30+5*S.q;
+      if(q.unlock){newEl=q.unlock.filter(s=>!S.el.includes(s));S.el.push(...newEl);}
+      if(q.rank&&q.rank>S.rank)S.rank=q.rank;
+      ending=!!q.end;S.q++;
+    }
+    if(S.hint<2){xp+=30;chips.push(['v','🧠 No-peek bonus +30 XP']);}
+    S.hint=0;
+  }
+  xp=Math.round(xp*m);S.xp+=xp;S.gold+=gold;
+  chips.unshift(['c',`+${xp} XP`+(m>1?` (🔥×${m.toFixed(1)})`:'')]);
+  if(gold)chips.splice(1,0,['g',`+${gold} 🪙`]);
+  if(newEl)newEl.forEach(s=>chips.push(['v',`🔓 New element: ${EL[s].name} (${s})`]));
+  if(isQuest&&q.rank)chips.push(['g',`⬆ Rank ${RANKS[q.rank]} adventurer!`]);
+  if(isQuest&&q.title)award(q.title,chips);
+  if(key===BYF.C8)award('diamond',chips);
+  if(S.streak>=5)award('roll',chips);
+  if(S.free>=5)award('free',chips);
+  if(S.el.length===SYMS.length)award('table',chips);
+  const n=nFound();
+  if(n>=TOTAL/2)award('half',chips);
+  if(n===TOTAL&&S.rank<8){S.rank=8;chips.push(['g','⬆ Rank SSS: the Grimoire is complete!']);award('all',chips);}
+  const after=lvlOf(S.xp);
+  if(after>before){chips.push(['c',`⭐ Level up! Lv ${after}`]);sfx.lvl();}
+  (isNew?sfx.disc:sfx.win)();
+  save();
+
+  let h=`<div class="tag">${isNew?'✨ NEW DISCOVERY ✨':isQuest?'QUEST COMPLETE':'TRANSMUTED'}</div>
+    <div class="emo">${r.emo}</div><h2>${r.name}</h2><div class="bigf">${r.f}</div>
+    <canvas id="mol" width="480" height="260" style="width:240px;height:130px"></canvas>
+    <p class="fact">${r.fact}</p>`;
+  if(isQuest)h+=`<div class="talk"><span class="f">${q.face}</span><span><b>${q.who}:</b> ${q.thanks}</span></div>`;
+  if(isNew||isQuest)h+=`<p class="crowd">${pick(CROWD)}</p>`;
+  h+=`<div class="chips">${chips.map((c,i)=>`<span class="chip ${c[0]}" style="animation-delay:${.25+i*.12}s">${c[1]}</span>`).join('')}</div>`;
+  if(ending)h+=`<p><b>🎉 The story is complete!</b><br>The Guild Board will now post endless requests, and the Grimoire still hides ${TOTAL-n} secret recipe${TOTAL-n===1?'':'s'}. Fill every page to reach the legendary <b>SSS rank</b>.</p>`;
+  h+=`<button class="ok" id="okb">${isQuest&&!ending?'Next quest →':'Continue'}</button>`;
+  open(h,'',()=>{renderAll();if(newEl&&newEl.length){renderTray(newEl);say('New elements unlocked! Try them out.',true);}});
+  drawMol($('mol'),r.c);
+  renderTop();
+}
+
+/* ───────────── Modals ───────────── */
+let onClose=null;
+function open(html,cls,cb){
+  $('sheet').className=cls||'';$('sheet').innerHTML=html;$('sheet').scrollTop=0;$('modal').classList.remove('hide');onClose=cb||null;
+  const ok=$('okb');if(ok){ok.onclick=close;ok.focus();}
+}
+function close(){$('modal').classList.add('hide');const f=onClose;onClose=null;if(f)f();}
+
+function intro(page){
+  const P=[
+    ['📚','Midnight.','Your chemistry exam is tomorrow. You rest your head on the periodic table for just one second…'],
+    ['🌙','…and wake up under two moons.','Welcome to the Kingdom of <b>Elementia</b>: a land of swords, dragons and magic, where nobody has ever heard of an atom.'],
+  ];
+  if(page<P.length){
+    const p=P[page];
+    open(`<div class="emo">${p[0]}</div><h2>${p[1]}</h2><p>${p[2]}</p><button class="ok" id="okb">Next →</button>`,'',()=>intro(page+1));
+  }else{
+    open(`<div class="tag" style="color:var(--cyan)">[ SYSTEM MESSAGE ]</div><h2>Unique skill acquired:<br><span style="color:var(--cyan)">PERIODIC TABLE</span></h2>
+      <p>You can see what everything is made of, and build it atom by atom. In this world, that makes you <b>ridiculously overpowered</b>.</p>
+      <p style="font-size:14px;color:var(--dim)">Tap elements to drop atoms into the circle, then press <b>Transmute</b>. Help the people of Elementia, and try your own mixes too: every real compound you discover goes into your Grimoire.</p>
+      <div style="text-align:center"><button class="ok" id="okb">Begin the adventure</button></div>`,'sys',()=>{S.intro=true;save();});
+    sfx.win();
+  }
+}
+function grimoire(tab){
+  S.seen=nFound();save();renderTop();
+  const n=nFound();
+  let h=`<h2>📖 Grimoire</h2><div class="prog"><i style="width:${100*n/TOTAL}%"></i></div>
+    <p style="font-size:13px;color:var(--dim);margin:4px 0">${n} of ${TOTAL} compounds discovered · ${S.el.length} of ${SYMS.length} elements</p>
+    <div class="tabs"><button id="t0" class="${tab?'':'on'}">Compounds</button><button id="t1" class="${tab?'on':''}">Elements</button></div><div class="grid">`;
+  if(!tab)for(const k of KEYS){
+    const r=R[k],can=Object.keys(r.c).every(s=>S.el.includes(s));
+    if(S.found[k])h+=`<div class="card"><span class="fm">${r.f}</span><b>${r.emo} ${r.name}</b><br>${r.fact}</div>`;
+    else if(can)h+=`<div class="card un"><span class="fm">?</span><b>❓ ${r.name}</b><br>Not discovered yet. It takes ${r.n} atom${r.n>1?'s':''}. Can you work out the recipe?</div>`;
+    else h+=`<div class="card un"><b>🔒 ???</b><br>Needs an element you have not unlocked.</div>`;
+  }
+  else for(const s of SYMS){
+    const e=EL[s];
+    if(S.el.includes(s))h+=`<div class="card" style="border-color:${e.col}88"><span class="fm" style="color:${e.col}">${s}</span><b>${e.name}</b> · no. ${e.n}<br>${e.fact}</div>`;
+    else h+=`<div class="card un"><b>🔒 ???</b><br>Keep questing to unlock this element.</div>`;
+  }
+  h+=`</div><div style="text-align:center"><button class="ok" id="okb">Close</button></div>`;
+  open(h,'wide');
+  $('t0').onclick=()=>grimoire(0);$('t1').onclick=()=>grimoire(1);
+}
+function status(){
+  const l=lvlOf(S.xp);
+  open(`<div class="tag" style="color:var(--cyan)">[ STATUS WINDOW ]</div>
+    <div class="row"><span>Name</span><b>The Alchemist</b></div>
+    <div class="row"><span>Class</span><b>Reincarnated Chemistry Student</b></div>
+    <div class="row"><span>Adventurer rank</span><b>${RANKS[S.rank]}</b></div>
+    <div class="row"><span>Level</span><b>${l}</b></div>
+    <div class="row"><span>Strength</span><b>3</b></div>
+    <div class="row"><span>Magic</span><b>0 (not needed)</b></div>
+    <div class="row"><span>Chemistry</span><b>${(9000+S.xp).toLocaleString()} (off the scale)</b></div>
+    <div class="row"><span>Unique skill</span><b>Periodic Table</b></div>
+    <h3>Record</h3>
+    <div class="row"><span>Story quests</span><b>${Math.min(S.q,QUESTS.length)} / ${QUESTS.length}</b></div>
+    <div class="row"><span>Guild requests filled</span><b>${S.done}</b></div>
+    <div class="row"><span>Compounds discovered</span><b>${nFound()} / ${TOTAL}</b></div>
+    <div class="row"><span>Best streak</span><b>${S.best}</b></div>
+    <div class="row"><span>Gold</span><b>${S.gold} 🪙</b></div>
+    <h3>Titles</h3><div class="titles">${S.titles.map(t=>`<span>🏅 ${t}</span>`).join('')}</div>
+    <div style="display:flex;justify-content:space-between;align-items:center"><button class="ghost" id="rst">Start over</button><button class="ok" id="okb">Close</button></div>`,'sys');
+  let armed=false;
+  $('rst').onclick=()=>{
+    if(!armed){armed=true;$('rst').textContent='Tap again to erase everything';$('rst').style.color='var(--bad)';return;}
+    const mute=S.mute;S=fresh();S.mute=mute;save();atoms=[];close();renderAll();intro(0);
+  };
+}
+
+/* ───────────── Canvas ───────────── */
+const cv=$('cv'),ctx=cv.getContext('2d');
+let W=0,H=0,DPR=1,time=0;
+const cy=()=>H*.44, RR=()=>Math.max(40,Math.min(W*.46,H*.4));
+function resize(){
+  const b=cv.getBoundingClientRect();DPR=Math.min(window.devicePixelRatio||1,2);
+  W=b.width;H=b.height;cv.width=Math.round(W*DPR);cv.height=Math.round(H*DPR);
+}
+const dark=col=>{const v=parseInt(col.slice(1),16);return (v>>16)*.3+((v>>8)&255)*.59+(v&255)*.11<140;};
+function orb(g,x,y,r,s,alpha){
+  const e=EL[s];g.save();g.globalAlpha=alpha==null?1:alpha;
+  const gr=g.createRadialGradient(x-r*.35,y-r*.4,r*.1,x,y,r);
+  gr.addColorStop(0,'#ffffff');gr.addColorStop(.35,e.col);gr.addColorStop(1,'#00000088');
+  g.fillStyle=e.col;g.beginPath();g.arc(x,y,r,0,TAU);g.fill();
+  g.fillStyle=gr;g.globalAlpha*=.75;g.fill();g.globalAlpha=alpha==null?1:alpha;
+  g.lineWidth=Math.max(1,r*.07);g.strokeStyle='#00000066';g.stroke();
+  g.fillStyle=dark(e.col)?'#fff':'#1a1030';g.font=`800 ${Math.round(r*.95)}px system-ui,sans-serif`;g.textAlign='center';g.textBaseline='middle';
+  g.fillText(s,x,y+r*.05);g.restore();
+}
+function poly(n,r,rot){ctx.beginPath();for(let i=0;i<=n;i++){const a=rot+i*TAU/n;ctx[i?'lineTo':'moveTo'](Math.cos(a)*r,Math.sin(a)*r);}ctx.stroke();}
+const GLYPH='☉☽☿♀♂♃♄✶☉☽☿♀♂♃♄✶';
+function frame(now){
+  const dt=Math.min(.05,(now-(frame.last||now))/1000);frame.last=now;time+=dt;
+  ctx.setTransform(DPR,0,0,DPR,0,0);ctx.clearRect(0,0,W,H);
+  const cx=W/2,cyy=cy(),Rr=RR(),n=atoms.length;
+  let p=0;
+  if(anim){anim.t+=dt;p=Math.min(1,anim.t/.85);}
+  const power=Math.min(1,n/5)+p;
+  const sx=shake>0?(Math.random()-.5)*10*shake:0;shake=Math.max(0,shake-dt);
+
+  // magic circle
+  ctx.save();ctx.translate(cx+sx,cyy);
+  const gl=ctx.createRadialGradient(0,0,0,0,0,Rr*1.15);
+  gl.addColorStop(0,`rgba(255,209,102,${.10+.14*power})`);gl.addColorStop(.6,`rgba(140,90,255,${.08+.08*power})`);gl.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.fillStyle=gl;ctx.beginPath();ctx.arc(0,0,Rr*1.15,0,TAU);ctx.fill();
+  ctx.strokeStyle=`rgba(255,209,102,${.45+.3*power})`;ctx.lineWidth=2;
+  ctx.beginPath();ctx.arc(0,0,Rr,0,TAU);ctx.stroke();
+  ctx.lineWidth=1;ctx.beginPath();ctx.arc(0,0,Rr*.84,0,TAU);ctx.stroke();
+  const spin=time*(.12+p*3);
+  ctx.fillStyle=`rgba(255,220,150,${.55+.3*power})`;ctx.font=`${Math.round(Rr*.11)}px serif`;ctx.textAlign='center';ctx.textBaseline='middle';
+  for(let i=0;i<16;i++){const a=spin+i*TAU/16;ctx.save();ctx.rotate(a);ctx.translate(0,-Rr*.92);ctx.fillText(GLYPH[i],0,0);ctx.restore();}
+  ctx.strokeStyle=`rgba(160,130,255,${.4+.3*power})`;ctx.lineWidth=1.5;
+  poly(3,Rr*.84,-spin*1.6);poly(3,Rr*.84,-spin*1.6+Math.PI);
+  ctx.beginPath();ctx.arc(0,0,Rr*.42,0,TAU);ctx.stroke();
+  ctx.restore();
+
+  // atoms
+  const ring=(n===1?0:Rr*.52)*(1-p*p), orbR=Rr*(n>6?.15:.17);
+  atoms.forEach((a,i)=>{
+    const ang=-Math.PI/2+i*TAU/Math.max(n,1)+time*.25+p*p*7;
+    const tx=cx+Math.cos(ang)*ring+sx, ty=cyy+Math.sin(ang)*ring;
+    const k=Math.min(1,dt*(anim?14:9));a.x+=(tx-a.x)*k;a.y+=(ty-a.y)*k;
+    orb(ctx,a.x,a.y,orbR*(.75+EL[a.s].r*.3)*(1-p*.4),a.s);
+  });
+
+  if(anim&&p>=1){
+    const a=anim;anim=null;
+    if(a.ok){
+      flash=1;
+      const cols=atoms.map(x=>EL[x.s].col).concat(['#ffd166','#fff']);
+      for(let i=0;i<90;i++){const an=Math.random()*TAU,v=60+Math.random()*320;parts.push({x:cx,y:cyy,vx:Math.cos(an)*v,vy:Math.sin(an)*v,life:1,max:.7+Math.random()*.7,col:pick(cols),r:2+Math.random()*4,spark:1});}
+      atoms=[];renderReadout();
+      setTimeout(()=>success(a.key),420);
+    }else fizzle();
+  }
+  // particles
+  for(const q of parts){
+    q.life-=dt/q.max;q.x+=q.vx*dt;q.y+=q.vy*dt;
+    if(q.spark){q.vx*=.97;q.vy=q.vy*.97+120*dt;}else{q.vy-=40*dt;}
+    ctx.globalAlpha=Math.max(0,q.life)*(q.spark?1:.5);ctx.fillStyle=q.col;ctx.beginPath();ctx.arc(q.x,q.y,q.spark?q.r:q.r*(2-q.life),0,TAU);ctx.fill();
+  }
+  ctx.globalAlpha=1;parts=parts.filter(q=>q.life>0);
+  if(flash>0){ctx.fillStyle=`rgba(255,240,200,${flash*.7})`;ctx.fillRect(0,0,W,H);flash-=dt*2.5;}
+  requestAnimationFrame(frame);
+}
+// A simple picture of which atoms are in the molecule (not its exact 3D shape)
+function drawMol(c,cn){
+  const g=c.getContext('2d'),w=c.width,h=c.height;let list=[];
+  for(const s in cn)for(let i=0;i<cn[s];i++)list.push(s);
+  list.sort((a,b)=>cn[a]-cn[b]||EL[b].r-EL[a].r);
+  const m=list.length-1,U=h/(m>4?6.6:m>0?5:3.4),pos=[];
+  if(m===0)pos.push([0,0]);
+  else if(m===1){const d=(EL[list[0]].r+EL[list[1]].r)*.42;pos.push([-d,0],[d,0]);}
+  else{
+    pos.push([0,0]);
+    for(let i=0;i<m;i++){
+      const a=(m===2?0:-Math.PI/2)+i*TAU/m, d=(EL[list[0]].r+EL[list[i+1]].r)*.84*(m>5&&i%2?1.45:1);
+      pos.push([Math.cos(a)*d,Math.sin(a)*d]);
+    }
+  }
+  for(let i=list.length-1;i>=0;i--)orb(g,w/2+pos[i][0]*U,h/2+pos[i][1]*U,EL[list[i]].r*U,list[i]);
+}
+
+/* ───────────── Input ───────────── */
+cv.addEventListener('pointerdown',e=>{
+  if(anim)return;
+  const b=cv.getBoundingClientRect(),x=e.clientX-b.left,y=e.clientY-b.top;let best=-1,bd=RR()*.24;
+  atoms.forEach((a,i)=>{const d=Math.hypot(a.x-x,a.y-y);if(d<bd){bd=d;best=i;}});
+  if(best>=0)removeAtom(best);
+});
+$('go').onclick=transmute;$('clear').onclick=clearAtoms;$('undo').onclick=()=>removeAtom(-1);
+$('bGrim').onclick=()=>grimoire(0);$('bStat').onclick=status;
+$('bSnd').onclick=()=>{S.mute=!S.mute;save();renderTop();if(!S.mute)sfx.add(0);};
+$('hintbtn').onclick=()=>{if(S.hint<2){S.hint++;save();renderQuest();sfx.add(7);}};
+addEventListener('keydown',e=>{
+  const modal=!$('modal').classList.contains('hide');
+  if(modal){if(e.key==='Escape'||e.key==='Enter'){e.preventDefault();const b=$('okb');if(b)b.click();}return;}
+  if(e.key==='Enter'){e.preventDefault();transmute();}
+  else if(e.key==='Backspace'){e.preventDefault();removeAtom(-1);}
+  else if(e.key==='Escape')clearAtoms();
+  else if(/^[1-9]$/.test(e.key)&&S.el[+e.key-1])addAtom(S.el[+e.key-1],+e.key-1,$('tray').children[+e.key-1]);
+});
+addEventListener('resize',resize);
+if(window.ResizeObserver)new ResizeObserver(resize).observe($('stage'));
+
+renderAll();resize();requestAnimationFrame(frame);
+if(!S.intro)intro(0);
+})();
+</script>
+</body>
+</html>
