@@ -54,6 +54,12 @@ The order of entries doesn't matter, because the dashboard sorts them. A game ad
 3. Open `index.html` locally and check that your card shows up and the game runs.
 4. Open a PR titled `Add game: <Title>`.
 
+An automatic check runs on every PR and tells you if something in `games.js` or your game folder is wrong. Fix what it reports and push again, and the check re-runs. To run the same check on your machine before opening the PR (needs [Node.js](https://nodejs.org)):
+
+```bash
+node scripts/check-games.mjs
+```
+
 ---
 
 ## Rules
@@ -91,6 +97,8 @@ index.html     the dashboard (search, tag filter, random game)
 play.html      the player page: shows a game under a "← All games" bar
 games.js       the game registry, the one file contributors edit
 games/<slug>/  one folder per game
+scripts/       the format check that runs on every PR
+.github/       the GitHub Action that runs it
 ```
 
 ## License
