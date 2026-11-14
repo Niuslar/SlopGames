@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SlopGames</title>
+<meta name="description" content="A free, open-source arcade of vibe-coded, single-file HTML games.">
+<style>
+  :root{
+    --bg:#f6f4ef;--surface:#ffffff;--ink:#1b1a17;--muted:#6b675e;--line:#e3dfd5;
+    --accent:#e2462b;--accent-ink:#ffffff;--chip:#efebe2;--shadow:0 1px 2px #0000000f,0 6px 20px #0000000d;
+  }
+  @media (prefers-color-scheme:dark){
+    :root:not([data-theme="light"]){
+      --bg:#121210;--surface:#1c1b18;--ink:#f1eee6;--muted:#a19d92;--line:#2e2c27;
+      --accent:#ff6a4d;--accent-ink:#1a0d09;--chip:#262520;--shadow:0 1px 2px #0006,0 8px 24px #0005;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#121210;--surface:#1c1b18;--ink:#f1eee6;--muted:#a19d92;--line:#2e2c27;
+    --accent:#ff6a4d;--accent-ink:#1a0d09;--chip:#262520;--shadow:0 1px 2px #0006,0 8px 24px #0005;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
+  a{color:inherit}
+  .wrap{max-width:1120px;margin:0 auto;padding:0 16px}
+  header{padding:48px 0 24px}
+  .brand{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+  h1{margin:0;font-size:clamp(36px,7vw,60px);letter-spacing:-.03em;line-height:1}
+  h1 span{color:var(--accent)}
+  .tag{color:var(--muted);margin:10px 0 0;max-width:56ch}
+  .bar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:28px 0 14px}
+  .search{flex:1 1 240px;min-width:0;padding:11px 14px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font:inherit}
+  .search:focus{outline:2px solid var(--accent);outline-offset:1px}
+  select,.btn{font:inherit;padding:10px 14px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer}
+  .btn.primary{background:var(--accent);color:var(--accent-ink);border-color:transparent;font-weight:600;text-decoration:none}
+  .chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:22px}
+  .chip{font:inherit;font-size:13px;padding:4px 11px;border-radius:999px;border:1px solid transparent;background:var(--chip);color:var(--muted);cursor:pointer}
+  .chip[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:18px}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden;box-shadow:var(--shadow);display:flex;flex-direction:column;text-decoration:none;transition:transform .15s ease}
+  .card:hover{transform:translateY(-3px)}
+  .card:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .thumb{aspect-ratio:16/9;display:grid;place-items:center;position:relative;overflow:hidden}
+  .thumb img{width:100%;height:100%;object-fit:cover;display:block}
+  .thumb .letter{font-size:64px;font-weight:800;color:#fff;text-shadow:0 3px 14px #0005;letter-spacing:-.04em}
+  .new{position:absolute;top:10px;left:10px;font-size:11px;font-weight:700;letter-spacing:.06em;background:var(--accent);color:var(--accent-ink);padding:3px 8px;border-radius:6px}
+  .body{padding:14px 16px 16px;display:flex;flex-direction:column;gap:6px;flex:1}
+  .title{font-weight:700;font-size:18px;margin:0}
+  .desc{color:var(--muted);font-size:14px;margin:0;flex:1}
+  .meta{display:flex;gap:6px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-top:6px}
+  .meta span{background:var(--chip);padding:2px 8px;border-radius:6px}
+  .empty{color:var(--muted);text-align:center;padding:60px 0}
+  footer{color:var(--muted);font-size:14px;padding:48px 0 32px;text-align:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand"><h1>Slop<span>Games</span></h1></div>
+    <p class="tag">An open arcade of vibe-coded browser games. Every game is one HTML file. You don't install anything, you just play.</p>
+    <div class="bar">
+      <input class="search" id="q" type="search" placeholder="Search games, authors, tags…" aria-label="Search games">
+      <select id="sort" aria-label="Sort">
+        <option value="new">Newest</option>
+        <option value="az">A–Z</option>
+      </select>
+      <button class="btn primary" id="random" type="button">🎲 Random</button>
+    </div>
+    <div class="chips" id="chips"></div>
+  </header>
+
+  <main>
+    <div class="grid" id="grid"></div>
+    <p class="empty" id="empty" hidden>No games match that. Try another search.</p>
+  </main>
+
+  <footer>
+    <span id="count"></span> · Made by its players
+  </footer>
+</div>
+
+<script src="games.js"></script>
+<script>
+(() => {
+  const NEW_DAYS = 14;
+  const games = (window.SLOP_GAMES || []).filter(g => g && g.slug && g.title);
+  const $ = id => document.getElementById(id);
+  const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  const url = g => `play.html?g=${encodeURIComponent(g.slug)}`;
+
+  // A cover colour picked from the slug, so games without a thumbnail still look distinct
+  const hue = s => [...s].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7) % 360;
+  const cover = g => { const h = hue(g.slug); return `linear-gradient(135deg,hsl(${h} 70% 52%),hsl(${(h + 50) % 360} 75% 38%))`; };
+  const isNew = g => g.added && (Date.now() - new Date(g.added)) / 864e5 < NEW_DAYS;
+
+  let tag = "", query = "";
+  const tags = [...new Set(games.flatMap(g => g.tags || []))].sort();
+
+  function renderChips() {
+    $("chips").innerHTML = ["", ...tags].map(t =>
+      `<button class="chip" type="button" data-tag="${esc(t)}" aria-pressed="${t === tag}">${t ? esc(t) : "All"}</button>`).join("");
+  }
+
+  function visible() {
+    const q = query.trim().toLowerCase();
+    const list = games.filter(g =>
+      (!tag || (g.tags || []).includes(tag)) &&
+      (!q || [g.title, g.description, g.author, g.madeWith, ...(g.tags || [])].join(" ").toLowerCase().includes(q)));
+    return $("sort").value === "az"
+      ? list.sort((a, b) => a.title.localeCompare(b.title))
+      : list.sort((a, b) => String(b.added || "").localeCompare(String(a.added || "")));
+  }
+
+  function render() {
+    const list = visible();
+    $("grid").innerHTML = list.map(g => `
+      <a class="card" href="${url(g)}">
+        <div class="thumb" style="background:${cover(g)}">
+          ${g.thumbnail ? `<img src="${esc(g.thumbnail)}" alt="" loading="lazy">` : `<span class="letter">${esc(g.title.slice(0, 2))}</span>`}
+          ${isNew(g) ? `<span class="new">NEW</span>` : ""}
+        </div>
+        <div class="body">
+          <h2 class="title">${esc(g.title)}</h2>
+          <p class="desc">${esc(g.description)}</p>
+          <div class="meta">
+            ${g.author ? `<span>by ${esc(g.author)}</span>` : ""}
+            ${g.madeWith ? `<span>made with ${esc(g.madeWith)}</span>` : ""}
+            ${g.controls ? `<span>${esc(g.controls)}</span>` : ""}
+          </div>
+        </div>
+      </a>`).join("");
+    $("empty").hidden = list.length > 0;
+    $("count").textContent = `${games.length} game${games.length === 1 ? "" : "s"}`;
+  }
+
+  $("chips").addEventListener("click", e => {
+    const b = e.target.closest(".chip"); if (!b) return;
+    tag = b.dataset.tag; renderChips(); render();
+  });
+  $("q").addEventListener("input", e => { query = e.target.value; render(); });
+  $("sort").addEventListener("change", render);
+  $("random").addEventListener("click", () => {
+    const pool = visible().length ? visible() : games;
+    if (pool.length) location.href = url(pool[Math.floor(Math.random() * pool.length)]);
+  });
+
+  renderChips(); render();
+})();
+</script>
+</body>
+</html>

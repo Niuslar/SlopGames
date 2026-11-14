@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SlopGames</title>
+<style>
+  :root{--bar:#121210;--ink:#f1eee6;--muted:#a19d92;--line:#2e2c27;--accent:#ff6a4d}
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;background:#000;color:var(--ink);font:15px/1.4 system-ui,-apple-system,"Segoe UI",sans-serif;overflow:hidden}
+  body{display:flex;flex-direction:column}
+  .bar{flex:0 0 44px;display:flex;align-items:center;gap:12px;padding:0 12px;background:var(--bar);border-bottom:1px solid var(--line)}
+  .bar a,.bar button{font:inherit;color:var(--ink);background:none;border:1px solid var(--line);border-radius:8px;padding:5px 12px;text-decoration:none;cursor:pointer;white-space:nowrap}
+  .bar a:hover,.bar button:hover{border-color:var(--accent)}
+  .info{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .info b{font-weight:700}
+  .info span{color:var(--muted);margin-left:8px}
+  iframe{flex:1;width:100%;border:0;display:block;background:#000}
+  .missing{flex:1;display:grid;place-items:center;text-align:center;color:var(--muted);padding:16px}
+  @media (max-width:480px){.info span{display:none}}
+</style>
+</head>
+<body>
+<div class="bar">
+  <a href="index.html" id="back">← All games</a>
+  <div class="info" id="info"></div>
+  <button type="button" id="fs" title="Full screen">⛶</button>
+</div>
+
+<script src="games.js"></script>
+<script>
+(() => {
+  const slug = new URLSearchParams(location.search).get("g");
+  // Only load games that are in the registry, so this page can't be pointed at arbitrary URLs.
+  const game = (window.SLOP_GAMES || []).find(g => g && g.slug === slug);
+  const info = document.getElementById("info");
+
+  if (!game) {
+    info.textContent = "Game not found";
+    document.body.insertAdjacentHTML("beforeend", `<div class="missing">That game isn't in the arcade. <a href="index.html" style="color:inherit;margin-left:6px">Back to all games</a></div>`);
+    return;
+  }
+
+  document.title = `${game.title} · SlopGames`;
+  const b = document.createElement("b"); b.textContent = game.title; info.append(b);
+  if (game.author) { const s = document.createElement("span"); s.textContent = `by ${game.author}`; info.append(s); }
+
+  const frame = document.createElement("iframe");
+  frame.src = `games/${encodeURIComponent(game.slug)}/index.html`;
+  frame.title = game.title;
+  frame.allow = "fullscreen; autoplay; gamepad; accelerometer; gyroscope";
+  frame.addEventListener("load", () => frame.focus()); // so keyboard controls work straight away
+  document.body.append(frame);
+
+  document.getElementById("fs").addEventListener("click", () => {
+    (frame.requestFullscreen || frame.webkitRequestFullscreen)?.call(frame);
+    frame.focus();
+  });
+})();
+</script>
+</body>
+</html>
