@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="110%" r="110%"><stop offset="0" stop-color="#ffb347"/><stop offset=".6" stop-color="#b83b5e"/><stop offset="1" stop-color="#1b1326"/></radialGradient>
+    <g id="face"><circle cx="-16" cy="-8" r="10" fill="#fff"/><circle cx="16" cy="-8" r="10" fill="#fff"/><circle cx="-16" cy="-8" r="5" fill="#1b1326"/><circle cx="16" cy="-8" r="5" fill="#1b1326"/></g>
+  </defs>
+  <rect width="640" height="360" fill="url(#bg)"/>
+  <g fill="#fff8ee" opacity=".8" font-family="system-ui,sans-serif" font-size="40"><text x="70" y="80">♪</text><text x="540" y="70">♫</text><text x="300" y="60">♪</text></g>
+  <g transform="translate(120 215)"><rect x="-55" y="-55" width="110" height="110" rx="33" fill="#ff6b4a"/><use href="#face"/><path d="M-14 16h28a14 14 0 0 1-28 0z" fill="#1b1326"/></g>
+  <g transform="translate(255 225)"><ellipse rx="68" ry="55" fill="#b388ff"/><use href="#face"/><rect x="-14" y="16" width="28" height="7" rx="3" fill="#1b1326"/></g>
+  <g transform="translate(390 205)"><rect x="-45" y="-65" width="90" height="130" rx="42" fill="#4de0c2"/><use href="#face"/><path d="M-12 14h24a12 16 0 0 1-24 0z" fill="#1b1326"/></g>
+  <g transform="translate(520 220)"><rect x="-4" y="-82" width="8" height="30" fill="#ff7ac8"/><circle cy="-88" r="10" fill="#fff8ee"/><ellipse rx="56" ry="54" fill="#ff7ac8"/><use href="#face"/><rect x="-14" y="16" width="28" height="7" rx="3" fill="#1b1326"/></g>
+  <text x="320" y="335" font-family="system-ui,sans-serif" font-weight="900" font-size="46" fill="#fff8ee" text-anchor="middle" letter-spacing="3">JAMBLOBS</text>
+</svg>
