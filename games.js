@@ -17,7 +17,7 @@ window.SLOP_GAMES = [
   {
     slug: "isekai-alchemist",
     title: "Isekai Alchemist",
-    description: "You dozed off on your chemistry homework and woke up in a fantasy kingdom where nobody has heard of atoms. Combine real elements into real compounds to help villagers, soothe a dragon's toothache and become an SSS-rank legend.",
+    description: "Pulled into a magic kingdom to be its hero, then thrown out as useless: no strength, no magic. But you can see atoms. Snap them together into real compounds, cross the kingdom and stop the Demon Lord's smoke.",
     author: "SlopGames",
     authorUrl: "",
     madeWith: "Claude",

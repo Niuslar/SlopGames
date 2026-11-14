@@ -27,6 +27,12 @@
   .ib:hover{background:#ffffff2a}
   .ib .dot{position:absolute;top:-3px;right:-3px;width:10px;height:10px;border-radius:50%;background:var(--gold)}
 
+  /* journey */
+  #journey{display:flex;gap:4px;align-items:center;font-size:11px;color:var(--dim);cursor:pointer;white-space:nowrap;overflow:hidden}
+  #journey span{flex:1;text-align:center;padding:3px 2px;border-radius:99px;border:1px solid var(--line);overflow:hidden;text-overflow:ellipsis}
+  #journey span.done{color:var(--gold);border-color:#ffd16655}
+  #journey span.now{color:#2a1150;background:var(--gold);border-color:var(--gold);font-weight:800}
+
   /* quest */
   #quest{display:flex;gap:10px;align-items:flex-start;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:9px 11px}
   #qface{font-size:34px;line-height:1.1}
@@ -77,6 +83,7 @@
   .tag{display:inline-block;font-size:12px;font-weight:800;letter-spacing:2px;color:var(--gold);margin-bottom:4px}
   .bigf{font-size:34px;font-weight:800;color:var(--gold);text-shadow:0 0 14px #ffd16666}
   .emo{font-size:46px;line-height:1.1}
+  .art{display:block;width:100%;height:auto;border-radius:10px;margin-bottom:12px}
   .fact{background:#00000038;border-radius:10px;padding:9px 11px;font-size:14px!important;text-align:left}
   .talk{display:flex;gap:9px;text-align:left;align-items:flex-start;font-size:14px;line-height:1.4;margin:10px 0}
   .talk .f{font-size:30px;line-height:1}
@@ -103,7 +110,7 @@
   .toast{font-size:16px;font-weight:800;padding:7px 16px;border-radius:99px;background:#0d2a4dee;border:1px solid var(--cyan);color:var(--cyan);
     box-shadow:0 0 18px #6fe3ff55;animation:pop 2.6s ease-out forwards}
   @keyframes pop{0%{opacity:0;transform:translateY(14px) scale(.8)}10%{opacity:1;transform:none}80%{opacity:1}100%{opacity:0;transform:translateY(-14px)}}
-  @media (max-width:520px){#xptxt{display:none}.el .nm{font-size:7px;letter-spacing:-.3px}#quest{padding:8px 9px}}
+  @media (max-width:520px){#xptxt{display:none}#journey{font-size:9.5px;gap:2px}.el .nm{font-size:7px;letter-spacing:-.3px}#quest{padding:8px 9px}}
   @media (max-height:560px){#qface{font-size:26px}#qbody{font-size:13px}.el .nm{display:none}}
 </style>
 </head>
@@ -120,6 +127,7 @@
     <button class="ib" id="bStat" title="Status window" aria-label="Status window">🪪</button>
     <button class="ib" id="bSnd" title="Sound" aria-label="Sound">🔊</button>
   </header>
+  <div id="journey" title="Your journey. Tap a place you have reached to re-read its chapter."></div>
 
   <section id="quest">
     <div id="qface"></div>
@@ -191,113 +199,214 @@ function rec(atoms,f,name,emo,fact){
   for(const t of atoms.split(' ')){const m=/^([A-Z][a-z]?)(\d*)$/.exec(t);const k=+m[2]||1;c[m[1]]=(c[m[1]]||0)+k;n+=k;}
   const key=keyOf(c);R[key]={key,c,n,f:sub(f),name,emo,fact};BYF[f]=key;
 }
-rec('H2 O','H2O','Water','💧','Two hydrogen atoms holding on to one oxygen. Water covers about 71% of Earth and makes up more than half of you.');
-rec('H2','H2','Hydrogen gas','🚀','Hydrogen atoms travel in pairs. It is the lightest gas there is, and it is used as rocket fuel.');
-rec('O2','O2','Oxygen gas','🌬️','The oxygen we breathe is two oxygen atoms joined together. Fires burn hotter when they get more of it.');
-rec('O3','O3','Ozone','🛡️','Three oxygen atoms. A layer of ozone high in the sky shields Earth from the Sun\'s harmful ultraviolet rays.');
+rec('H2 O','H2O','Water','💧','Two hydrogens and one oxygen. It covers most of Earth and makes up over half of you.');
+rec('H2','H2','Hydrogen gas','🚀','Hydrogen atoms travel in pairs. The lightest gas there is, and a rocket fuel.');
+rec('O2','O2','Oxygen gas','🌬️','Two oxygen atoms joined together. This is the part of air you breathe.');
+rec('O3','O3','Ozone','🛡️','Three oxygen atoms. High in the sky, it shields Earth from harsh sunlight.');
 rec('C O2','CO2','Carbon dioxide','🫧','The bubbles in fizzy drinks. You breathe it out, and plants take it in.');
-rec('C O','CO','Carbon monoxide','⚠️','Just one oxygen fewer than CO₂, but a dangerous invisible gas. That is why homes have carbon monoxide alarms.');
+rec('C O','CO','Carbon monoxide','⚠️','One oxygen fewer than CO₂ makes a dangerous invisible gas. Homes have alarms for it.');
 rec('C H4','CH4','Methane','🔥','The natural gas burned in cookers and heaters. Cows burp out a lot of it!');
-rec('H2 O2','H2O2','Hydrogen peroxide','🩹','Water with one extra oxygen. It fizzes when it touches a cut and is used as a disinfectant.');
+rec('H2 O2','H2O2','Hydrogen peroxide','🩹','Water with one extra oxygen. It fizzes on a cut and kills germs.');
 rec('C','C','Graphite','✏️','Pure carbon in soft, slippery sheets. It is the "lead" in your pencil.');
-rec('C8','C','Diamond','💎','Pure carbon again, but squeezed so hard that the atoms lock into the hardest natural material known. Same element, different arrangement!');
-rec('C2 H4 O2','CH3COOH','Vinegar acid','🥗','Acetic acid, the sour part of vinegar. Lovely on chips, and good at cleaning kettles.');
+rec('C8','C','Diamond','💎','Pure carbon, squeezed until it becomes the hardest natural material known.');
+rec('C2 H4 O2','CH3COOH','Vinegar acid','🥗','Acetic acid, the sour part of vinegar.');
 rec('H2 C O3','H2CO3','Carbonic acid','🥤','Made when CO₂ dissolves in water. It gives fizzy drinks their slight tang.');
-rec('Na Cl','NaCl','Table salt','🧂','A fizzing metal plus a poisonous gas makes… the stuff you sprinkle on chips. A compound can be nothing like the elements inside it!');
+rec('Na Cl','NaCl','Table salt','🧂','A fizzing metal plus a poison gas makes… something you put on chips!');
 rec('H Cl','HCl','Hydrochloric acid','🧪','A strong acid. Your own stomach makes it to help digest food.');
-rec('Na O H','NaOH','Lye','🧼','Sodium hydroxide, a strong base (the opposite of an acid). Cooked with fats, it turns into soap.');
-rec('Cl2','Cl2','Chlorine gas','☁️','Chlorine atoms pair up into a green-yellow gas. Chlorine compounds keep swimming pools clean.');
-rec('Na H C O3','NaHCO3','Baking soda','🧁','When it is heated or meets an acid it lets go of CO₂ bubbles, and those bubbles make cakes rise.');
+rec('Na O H','NaOH','Lye','🧼','A strong base, the opposite of an acid. Cooked with fat, it becomes soap.');
+rec('Cl2','Cl2','Chlorine gas','☁️','A green-yellow gas. Chlorine compounds keep swimming pools clean.');
+rec('Na H C O3','NaHCO3','Baking soda','🧁','Heat it and it lets out CO₂ bubbles. Those bubbles make cakes rise.');
 rec('Na Cl O','NaClO','Bleach','🧴','Sodium hypochlorite. It removes stains and kills germs.');
-rec('N2','N2','Nitrogen gas','🌫️','Most of the air is nitrogen atoms in pairs. They hold each other so tightly that they hardly react with anything.');
-rec('N H3','NH3','Ammonia','🌱','A sharp-smelling gas that gets turned into fertiliser, which helps feed billions of people.');
+rec('N2','N2','Nitrogen gas','🌫️','Nitrogen atoms in pairs. Most of the air is this.');
+rec('N H3','NH3','Ammonia','🌱','A smelly gas that becomes fertiliser and helps feed billions of people.');
 rec('N2 O','N2O','Laughing gas','😂','Nitrous oxide. Dentists use it to help patients relax.');
 rec('N O2','NO2','Nitrogen dioxide','🏭','A brown gas found in car exhaust and city smog.');
-rec('H N O3','HNO3','Nitric acid','⚗️','A powerful acid. Medieval alchemists called it "aqua fortis", meaning strong water.');
-rec('Ca O','CaO','Quicklime','🏗️','Made by roasting limestone. It gets very hot when water is added, and it is a key ingredient of cement.');
-rec('Ca C O3','CaCO3','Limestone','🏛️','Calcium carbonate. Chalk, marble, seashells and eggshells are all made of it.');
-rec('Ca O2 H2','Ca(OH)2','Slaked lime','🧱','Quicklime plus water. Builders have used it in mortar and plaster for thousands of years.');
+rec('H N O3','HNO3','Nitric acid','⚗️','A powerful acid. Old alchemists called it "strong water".');
+rec('Ca O','CaO','Quicklime','🏗️','Roasted limestone. It heats up in water and goes into cement.');
+rec('Ca C O3','CaCO3','Limestone','🏛️','Chalk, marble, seashells and eggshells are all made of this.');
+rec('Ca O2 H2','Ca(OH)2','Slaked lime','🧱','Quicklime plus water. Used in mortar for thousands of years.');
 rec('Ca Cl2','CaCl2','Calcium chloride','❄️','A salt that is spread on icy roads to melt the ice.');
-rec('Ca S O4','CaSO4','Gypsum','🩼','Calcium sulfate, the mineral behind plaster. It is what casts for broken arms were made from.');
-rec('Ca F2','CaF2','Fluorite','🔮','A colourful crystal that glows under ultraviolet light. The word "fluorescent" is named after it.');
+rec('Ca S O4','CaSO4','Gypsum','🩼','The mineral in plaster, used for walls and for casts on broken arms.');
+rec('Ca F2','CaF2','Fluorite','🔮','A colourful crystal that glows under ultraviolet light.');
 rec('Fe','Fe','Iron','🗡️','Pure iron: strong, magnetic and perfect for swords and horseshoes.');
-rec('Fe2 O3','Fe2O3','Rust','🟤','Iron slowly joins with oxygen from damp air. Rust is also what makes the planet Mars red.');
-rec('Fe S2','FeS2','Fool\'s gold','✨','Pyrite. It is shiny and golden, but it is only iron and sulfur. It has fooled many treasure hunters.');
-rec('Fe3 O4','Fe3O4','Magnetite','🧲','A naturally magnetic rock. Early sailors used pieces of it to make the first compasses.');
+rec('Fe2 O3','Fe2O3','Rust','🟤','Iron joined with oxygen from damp air. It also makes Mars red.');
+rec('Fe S2','FeS2','Fool\'s gold','✨','Shiny and golden, but only iron and sulfur. It has fooled many treasure hunters.');
+rec('Fe3 O4','Fe3O4','Magnetite','🧲','A naturally magnetic rock, used in the first compasses.');
 rec('S','S','Sulfur','🌋','Yellow crystals found around volcanoes. Old books call it brimstone.');
 rec('S O2','SO2','Sulfur dioxide','💨','A choking gas that volcanoes puff out.');
 rec('H2 S','H2S','Rotten-egg gas','🥚','Hydrogen sulfide. It is the reason rotten eggs smell so awful.');
-rec('H2 S O4','H2SO4','Sulfuric acid','🔋','One of the most widely used chemicals in the world. It is the acid inside car batteries.');
+rec('H2 S O4','H2SO4','Sulfuric acid','🔋','One of the most used chemicals in the world. It is inside car batteries.');
 rec('Si','Si','Silicon','💻','Pure silicon is sliced into the chips that run every computer and phone.');
-rec('Si O2','SiO2','Quartz','🏖️','Silicon dioxide. Sand is mostly this, and when you melt it you get glass.');
-rec('Si C','SiC','Carborundum','🪨','Silicon carbide, nearly as hard as diamond. It is the grit on sandpaper and grinding wheels.');
+rec('Si O2','SiO2','Quartz','🏖️','Sand is mostly this. Melt it and you get glass.');
+rec('Si C','SiC','Carborundum','🪨','Nearly as hard as diamond. It is the grit on sandpaper.');
 rec('Al','Al','Aluminium','🥫','Pure aluminium: light, strong and easy to recycle again and again.');
-rec('Al2 O3','Al2O3','Ruby','❤️','Aluminium oxide crystals are called corundum. A pinch of chromium turns them into red rubies; other traces make blue sapphires.');
-rec('He','He','Helium','🎈','A noble gas is happy on its own, so one atom is all you need. It is lighter than air, which makes balloons float.');
-rec('Ne','Ne','Neon','🌟','Another noble gas that never bonds. Run electricity through it and it glows red-orange.');
-rec('K N O3','KNO3','Saltpetre','🌹','Potassium nitrate. It is a plant fertiliser, and it also gives fireworks their whoosh.');
+rec('Al2 O3','Al2O3','Ruby','❤️','Aluminium oxide with a pinch of chromium. Other traces make blue sapphires.');
+rec('He','He','Helium','🎈','A noble gas, happy on its own. Lighter than air, so balloons float.');
+rec('Ne','Ne','Neon','🌟','A noble gas that never bonds. Electricity makes it glow red-orange.');
+rec('K N O3','KNO3','Saltpetre','🌹','A plant fertiliser that also gives fireworks their whoosh.');
 rec('K Cl','KCl','Potassium chloride','🍌','A cousin of table salt. It is used in fertiliser and in "low-sodium" salt.');
-rec('Mg O','MgO','Magnesia','🤍','The white powder left behind when magnesium burns. It can take enormous heat, so it is used to line furnaces.');
-rec('Mg S O4','MgSO4','Epsom salt','🛁','Magnesium sulfate. People dissolve it in a warm bath to soothe tired muscles.');
-rec('Mg O2 H2','Mg(OH)2','Milk of magnesia','🥛','A gentle base. It cancels out extra stomach acid. When an acid and a base cancel each other, that is called neutralisation.');
-rec('Cu','Cu','Copper','🪙','Pure copper. Electric wires are made from it, and so were some of the very first metal tools.');
-rec('Cu O','CuO','Copper oxide','⚫','A black powder that forms when copper is heated in air. Potters use it to colour glazes green and blue.');
-rec('Cu S O4','CuSO4','Blue vitriol','🔷','Copper sulfate. With a little water it grows into brilliant blue crystals.');
+rec('Mg O','MgO','Magnesia','🤍','The white powder left when magnesium burns. It lines furnaces.');
+rec('Mg S O4','MgSO4','Epsom salt','🛁','Dissolved in a warm bath, it soothes tired muscles.');
+rec('Mg O2 H2','Mg(OH)2','Milk of magnesia','🥛','A gentle base. It cancels out stomach acid, which is called neutralisation.');
+rec('Cu','Cu','Copper','🪙','Pure copper. Electric wires are made of it.');
+rec('Cu O','CuO','Copper oxide','⚫','A black powder that potters use to colour glazes green and blue.');
+rec('Cu S O4','CuSO4','Blue vitriol','🔷','Copper sulfate. With a little water it grows brilliant blue crystals.');
 rec('Ag','Ag','Silver','🥈','Pure silver, the best conductor of electricity of any metal.');
-rec('Ag2 S','Ag2S','Tarnish','🌑','The dark coating on old silver spoons is silver that has joined with sulfur from the air.');
+rec('Ag2 S','Ag2S','Tarnish','🌑','The dark coating on old silver: silver joined with sulfur from the air.');
 rec('Na F','NaF','Sodium fluoride','🦷','The tooth-protecting ingredient in many toothpastes.');
-rec('Au','Au','Gold','👑','Gold is an element, so chemistry cannot make it out of anything else. Alchemists spent centuries trying!');
+rec('Au','Au','Gold','👑','Gold is an element, so it cannot be made from anything else. Alchemists tried for centuries!');
 BYF.C8=keyOf({C:8});R[BYF.C8].f='C (×8)';BYF.C=keyOf({C:1});
 const KEYS=Object.keys(R), TOTAL=KEYS.length;
 
 /* ───────────── Story ───────────── */
 const RANKS=['F','E','D','C','B','A','S','SS','SSS'];
+/* The plot: pulled into another world to be its hero, then thrown out as useless, the Alchemist travels from a
+   tiny village to the Demon Lord's castle to stop the smoke, then has to decide whether to go home.
+   Each chapter is a place; `at` is its first quest. */
+
+/* Drawings: small flat scenes built from SVG shapes */
+const svg=(bg,body)=>`<svg class="art" viewBox="0 0 320 140" role="img"><rect width="320" height="140" fill="${bg}"/>${body}</svg>`;
+const peg=(x,y,c,k=1)=>`<g transform="translate(${x} ${y}) scale(${k})"><path d="M-6 0q0-13 6-13t6 13z" fill="${c}"/><circle cy="-17" r="5" fill="#f1c9a5"/></g>`;
+const ball=(x,y,r,c,t)=>`<circle cx="${x}" cy="${y}" r="${r}" fill="${c}" stroke="#0006" stroke-width="1.5"/><text x="${x}" y="${y+r*.38}" font-size="${r*1.1}" font-weight="800" text-anchor="middle" fill="#1a1030" font-family="system-ui,sans-serif">${t}</text>`;
+const dots=(c,pts)=>pts.map(p=>`<circle cx="${p[0]}" cy="${p[1]}" r="${p[2]||1.2}" fill="${c}"/>`).join('');
+const smoke=(c,pts)=>pts.map(p=>`<ellipse cx="${p[0]}" cy="${p[1]}" rx="${p[2]}" ry="${p[3]}" fill="${c}"/>`).join('');
+const hat=(x,y,c)=>`<path d="M${x-11} ${y}h22l-11-26z" fill="${c}"/>`;
+const HERO='#5b8cff', WIZ='#4b3aa0';
+const ART={
+  street:svg('#151238',dots('#fff',[[30,18],[80,30],[130,14],[190,26],[300,50],[226,12]])+
+    `<circle cx="262" cy="28" r="13" fill="#f6efc8"/>
+    <path d="M0 110V54h38V38h34v72zM84 110V46h44v64zM206 110V60h30V42h40v68zM286 110V68h34v42z" fill="#0b0920"/>`+
+    [[8,62],[22,62],[46,48],[58,48],[46,66],[94,56],[110,56],[94,74],[214,70],[244,52],[258,52],[244,70],[296,78]].map(w=>`<rect x="${w[0]}" y="${w[1]}" width="6" height="8" fill="#ffd166"/>`).join('')+
+    `<rect y="110" width="320" height="30" fill="#231c4a"/>
+    <path d="M118 124L138 30h44l20 94z" fill="#ffd16626"/>
+    <ellipse cx="160" cy="124" rx="52" ry="10" fill="#ffd16633" stroke="#ffd166" stroke-width="2"/><ellipse cx="160" cy="124" rx="34" ry="6" fill="none" stroke="#ffd166"/>`+
+    peg(160,123,HERO,1.35)+`<rect x="170" y="110" width="9" height="10" rx="1" fill="#e9e2d0"/>`),
+  throne:svg('#2a1640',[18,66,236,284].map(x=>`<rect x="${x}" y="0" width="16" height="108" fill="#3d2560"/>`).join('')+
+    `<path d="M40 0h20l-10 26zM260 0h20l-10 26z" fill="#a8324a"/>
+    <rect y="104" width="320" height="36" fill="#1d0f2e"/><path d="M126 140L150 76h20l24 64z" fill="#a8324a"/>
+    <rect x="144" y="34" width="32" height="44" rx="4" fill="#ffd166"/>`+peg(160,78,'#7b2d8e',1.2)+
+    `<path d="M153 52l1-9 3 5 3-6 3 6 3-5 1 9z" fill="#ffd166" stroke="#a87a1a" stroke-width=".6"/>`+
+    peg(40,116,'#2e8b57')+peg(62,124,'#b5651d')+peg(92,114,'#c94f7c')+peg(228,114,'#3d8fb5')+peg(258,124,'#8a6ad6')+peg(280,116,'#d6a23a')+
+    `<ellipse cx="160" cy="128" rx="30" ry="6" fill="#ffd16644" stroke="#ffd166"/>`+peg(160,128,HERO,1.35)),
+  crystal:svg('#1b1436',`<rect x="144" y="98" width="32" height="22" rx="2" fill="#4a3a70"/>
+    <path d="M160 22l24 32-24 46-24-46z" fill="#6fe3ff"/><path d="M160 22v78M136 54h48" stroke="#ffffff88" fill="none"/>
+    <rect x="22" y="26" width="92" height="22" rx="6" fill="#00000055"/><text x="68" y="42" font-size="13" font-weight="800" text-anchor="middle" fill="#ff9d9d" font-family="system-ui,sans-serif">Strength: 3</text>
+    <rect x="22" y="54" width="92" height="22" rx="6" fill="#00000055"/><text x="68" y="70" font-size="13" font-weight="800" text-anchor="middle" fill="#ff9d9d" font-family="system-ui,sans-serif">Magic: 0</text>
+    <rect x="216" y="30" width="84" height="24" rx="12" fill="#fff"/><path d="M240 54l-4 10 14-10z" fill="#fff"/><text x="258" y="47" font-size="14" font-weight="800" text-anchor="middle" fill="#2a1150" font-family="system-ui,sans-serif">Useless!</text>`+
+    peg(100,122,HERO,1.35)+peg(232,122,WIZ,1.45)+hat(232,92,WIZ)+`<path d="M227 101h10l-5 12z" fill="#eee"/>`),
+  atoms:svg('#10203f',dots('#6fe3ff',[[30,30,2],[290,24,2],[40,112,1.5],[280,118,1.5],[100,22],[226,30],[300,70]])+
+    `<path d="M160 96L160 44M160 96L78 84M160 96L246 80" stroke="#6fe3ff55" stroke-width="2" stroke-dasharray="3 4"/>
+    <path d="M132 58L160 40L188 58" stroke="#fff" stroke-width="4" fill="none"/>`+
+    ball(160,40,16,'#ff5a5a','O')+ball(130,60,11,'#f2f6ff','H')+ball(190,60,11,'#f2f6ff','H')+ball(70,84,14,'#8f96a8','C')+ball(254,78,15,'#b48cff','Na')+
+    peg(160,134,HERO,1.6)),
+  dustwell:svg('#6b5a6e',`<circle cx="252" cy="44" r="14" fill="#e8b27a" opacity=".6"/>`+smoke('#3d3542',[[60,16,74,16],[176,8,92,16],[284,20,62,14],[120,30,40,8]])+
+    `<path d="M0 104Q80 74 160 98T320 90V140H0z" fill="#4a3d3a"/><rect y="116" width="320" height="24" fill="#3a2e2a"/>`+
+    [34,246].map(x=>`<rect x="${x}" y="86" width="32" height="30" fill="#8a6a4a"/><path d="M${x-5} 86l21-20 21 20z" fill="#5a3a2a"/><rect x="${x+12}" y="100" width="8" height="16" fill="#3a2418"/>`).join('')+
+    `<rect x="146" y="100" width="28" height="18" rx="2" fill="#9a98a6"/><rect x="149" y="82" width="3" height="18" fill="#5a3a2a"/><rect x="168" y="82" width="3" height="18" fill="#5a3a2a"/><path d="M140 84l20-13 20 13z" fill="#5a3a2a"/>
+    <path d="M212 116V86M212 100l-10-10M212 94l9-9" stroke="#2a2020" stroke-width="3" fill="none"/>`+peg(118,120,'#b5651d')+peg(104,124,'#2e8b57',.8)),
+  brinehaven:svg('#3b4a8a',`<circle cx="270" cy="30" r="14" fill="#ffd9a0"/><rect y="92" width="320" height="48" fill="#24406e"/>
+    <path d="M170 104h24M230 124h30M186 130h20M280 108h22" stroke="#5f86c4" stroke-width="2"/>
+    <path d="M206 96h76l-12 18h-52z" fill="#5a3a2a"/><rect x="243" y="46" width="3" height="50" fill="#3a2418"/><path d="M248 50q28 20 0 42z" fill="#f3ecff"/><path d="M246 46h14l-14 8z" fill="#a8324a"/>
+    <path d="M0 140V102h150v38z" fill="#4a3d3a"/>
+    <rect x="28" y="60" width="84" height="42" fill="#c9a36a"/><path d="M20 60l50-30 50 30z" fill="#8a3a3a"/><rect x="61" y="78" width="18" height="24" rx="2" fill="#5a3a2a"/>
+    <circle cx="70" cy="50" r="7" fill="#ffd166" stroke="#a87a1a"/><rect x="36" y="70" width="12" height="12" fill="#ffe9a8"/><rect x="92" y="70" width="12" height="12" fill="#ffe9a8"/>`+
+    peg(128,112,'#2e8b57')+peg(142,118,HERO,1.1)),
+  ironwall:svg('#3a2f4a',`<circle cx="160" cy="46" r="34" fill="#ff6b3d22"/><path d="M104 110l46-64h20l46 64z" fill="#1c1420"/><circle cx="160" cy="46" r="6" fill="#ff6b3d"/>`+smoke('#241a2a',[[170,24,30,9],[196,12,26,8]])+
+    `<rect y="130" width="320" height="10" fill="#2a2030"/>
+    <path d="M0 140V72h14v-9h14v9h14v-9h14v9h14v-9h14v9h14v26l-12 8 8 10-12 8 6 16zM320 140V72h-14v-9h-14v9h-14v-9h-14v9h-14v-9h-14v9h-14v22l10 10-8 12 12 6-4 18z" fill="#8d8794"/>
+    <path d="M0 96h86M0 118h80M234 100h86M240 122h80" stroke="#6f6a75" stroke-width="1.5"/>`+
+    [[122,128,9],[140,132,7],[190,130,8],[204,134,6],[164,134,5]].map(r=>`<rect x="${r[0]}" y="${r[1]-r[2]/2}" width="${r[2]*1.6}" height="${r[2]}" rx="2" fill="#6f6a75"/>`).join('')+
+    peg(150,128,'#9aa3b5',1.1)+peg(178,130,'#9aa3b5',1.1)+`<path d="M142 128V96M186 130V98" stroke="#d8dce6" stroke-width="2"/>`),
+  aurelis:svg('#7a6a7e',smoke('#4a4250',[[50,14,70,16],[270,12,76,16],[110,34,40,8],[236,36,36,8]])+
+    `<path d="M152 0h16l6 18-12 12 8 14-12-4-8-18 6-10z" fill="#fff3b0"/><path d="M160 40L112 140h100z" fill="#fff3b022"/>
+    <path d="M0 140v-34h30v-12h26v46zM320 140v-30h-28v-14h-24v44z" fill="#5c5060"/>
+    <rect x="90" y="90" width="140" height="50" fill="#e8d9b0"/><rect x="96" y="62" width="22" height="78" fill="#f1e4c0"/><rect x="202" y="62" width="22" height="78" fill="#f1e4c0"/><rect x="146" y="48" width="28" height="92" fill="#f1e4c0"/>
+    <path d="M92 62l15-24 15 24zM198 62l15-24 15 24zM142 48l18-28 18 28z" fill="#d4a23a"/>
+    <path d="M150 140v-20a10 10 0 0120 0v20z" fill="#5a3a2a"/>`+
+    [[104,74],[210,74],[157,62],[128,102],[186,102]].map(w=>`<rect x="${w[0]}" y="${w[1]}" width="6" height="10" rx="3" fill="#6b5a8e"/>`).join('')),
+  cinder:svg('#2a0f14',`<circle cx="160" cy="60" r="76" fill="#ff6b3d22"/>`+smoke('#40343a',[[150,6,60,10],[210,14,50,9],[96,16,40,8]])+
+    `<path d="M40 140l92-94h56l92 94z" fill="#120a10"/>
+    <path d="M152 46q10 30 0 52q-6 22 4 42M172 46q-4 24 8 40q10 20 4 54" stroke="#ff6b3d" stroke-width="3.5" fill="none"/>
+    <rect x="140" y="26" width="40" height="22" fill="#120a10"/><rect x="134" y="14" width="11" height="34" fill="#120a10"/><rect x="175" y="14" width="11" height="34" fill="#120a10"/>
+    <rect x="157" y="32" width="6" height="9" fill="#ff6b3d"/><rect x="137" y="20" width="4" height="6" fill="#ff6b3d"/><rect x="178" y="20" width="4" height="6" fill="#ff6b3d"/>
+    <path d="M58 122q-20 6-26-10" stroke="#b3312e" stroke-width="6" fill="none" stroke-linecap="round"/><path d="M72 114l14-34 14 34z" fill="#7d1f1d"/>
+    <ellipse cx="82" cy="120" rx="27" ry="12" fill="#b3312e"/><path d="M100 114q12-18 22-17" stroke="#b3312e" stroke-width="9" fill="none" stroke-linecap="round"/><ellipse cx="127" cy="96" rx="10" ry="6.5" fill="#b3312e"/>
+    <circle cx="129" cy="94" r="1.8" fill="#ffd166"/><path d="M68 131v6M94 131v6" stroke="#b3312e" stroke-width="5" stroke-linecap="round"/>`+peg(246,138,HERO,1.1)),
+  gate:svg('#161a3a',dots('#fff',[[30,20],[70,44],[262,30],[296,60],[230,14],[20,70]])+
+    `<rect y="120" width="320" height="20" fill="#23284a"/>
+    <path d="M110 126V62a50 50 0 01100 0v64z" fill="#8d8794"/><path d="M127 126V62a33 33 0 0166 0v64z" fill="#2a1a6a"/>
+    <ellipse cx="160" cy="82" rx="25" ry="36" fill="none" stroke="#6fe3ff" stroke-width="2.5"/><ellipse cx="160" cy="84" rx="16" ry="24" fill="none" stroke="#b48cff" stroke-width="2.5"/><ellipse cx="160" cy="86" rx="7" ry="11" fill="#ffffffaa"/>
+    <path d="M160 2l9 9-9 12-9-12z" fill="#bff6ff" stroke="#fff" stroke-width=".8"/>`+
+    peg(88,128,HERO,1.25)+peg(238,128,WIZ,1.25)+hat(238,102,WIZ)),
+};
+const CHAPTERS=[
+  {at:0,place:'Dustwell',art:'dustwell',title:'The Useless Hero',
+    text:'They drop you in Dustwell, a tiny village. The Demon Lord\'s smoke has dried up the well and choked the fires.',goal:'Save the village.'},
+  {at:3,place:'Brinehaven',art:'brinehaven',title:'The Guild',
+    text:'News of your miracles spreads. To reach the Demon Lord you will need friends: the Adventurers\' Guild.',goal:'Join the Guild.'},
+  {at:7,place:'Ironwall',art:'ironwall',title:'The Curse',
+    text:'The Guild sends you to the fort that guards the road to the Demon Lord. It is falling apart.',goal:'Fix the fort.'},
+  {at:11,place:'Aurelis',art:'aurelis',title:'The Palace Wants You Back',
+    text:'The palace that threw you out now begs for help. Ash covers the capital, and the sky itself is torn.',goal:'Mend the sky.'},
+  {at:18,place:'Cinder Keep',art:'cinder',title:'The Demon Lord',
+    text:'The Demon Lord\'s volcano castle, where all the smoke comes from. A dragon guards the gate.',goal:'Stop the smoke for good.'},
+  {at:21,place:'Home?',art:'gate',title:'The Way Home',
+    text:'The smoke is gone! One thing is left: the magic Gate that pulled you here could send you home.',goal:'Open the Gate.'},
+];
 const Q=(who,face,ask,want,thanks,extra)=>Object.assign({who,face,ask,want:BYF[want],thanks},extra);
 const QUESTS=[
-  Q('Farmer Barley','👨‍🌾','The village well has run dry and my turnips are wilting! If only someone could make <b>WATER</b> out of thin air…','H2O',
-    'Water! From NOTHING! Are you some kind of archmage?!',{tip:'Water is H₂O: tap <b>H</b> twice and <b>O</b> once, then Transmute.',title:'Well Whisperer'}),
-  Q('Blacksmith Brunhild','👩‍🏭','My forge fire is too weak to melt iron. Fire needs the "breath of air" to burn hot. Can you bottle some <b>OXYGEN GAS</b>?','O2',
-    'The flames are roaring! You bottled the wind itself!',{tip:'Oxygen atoms never float around alone.'}),
-  Q('Innkeeper Hobb','🧔','The harvest festival is tomorrow and my drinks are flat. I need the gas that makes bubbles: <b>CARBON DIOXIDE</b>!','CO2',
-    'It fizzes! It tickles my nose! Witchcraft! …Delicious witchcraft.',{unlock:['Na','Cl'],rank:1,tip:'"Di" means two.'}),
-  Q('Cook Marla','👩‍🍳','My soup tastes of nothing at all. Legends speak of a white crystal called <b>SALT</b>…','NaCl',
-    'A fizzing metal and a poison gas made… seasoning?! I will never understand alchemy.',{unlock:['N']}),
-  Q('Farmer Barley','👨‍🌾','The soil is tired. My grandmother swore by smelly <b>AMMONIA</b> to feed the fields.','NH3',
+  // 1 · Dustwell
+  Q('Farmer Barley','👨‍🌾','The smoke dried up our well. Can you make <b>WATER</b>?','H2O',
+    'Water! From nothing! And the palace threw YOU out?!',{tip:'Water is H₂O: tap <b>H</b> twice and <b>O</b> once, then Transmute.',title:'Well Whisperer'}),
+  Q('Blacksmith Brunhild','👩‍🏭','My forge fire is choking. It needs <b>OXYGEN GAS</b> to burn.','O2',
+    'The flames are roaring! You bottled the wind!',{tip:'Oxygen atoms never float around alone.'}),
+  Q('Elder Hobb','🧔','Tonight we feast in your honour! But the drinks are flat. I need bubbles: <b>CARBON DIOXIDE</b>.','CO2',
+    'It fizzes! Take this letter to the Guild in Brinehaven. They need you.',{unlock:['Na','Cl'],rank:1,tip:'"Di" means two.'}),
+  // 2 · Brinehaven
+  Q('Guild Clerk Mina','👩‍💼','Want to join the Guild? Entry test: bring me <b>SALT</b>. The mine is three days away.','NaCl',
+    'That took four seconds. …Welcome to the Guild.',{unlock:['N']}),
+  Q('Farmer Odalys','👩‍🌾','Ash has ruined the soil. They say smelly <b>AMMONIA</b> feeds a field.','NH3',
     'Phew, what a stink! But look at those turnips GROW!'),
-  Q('Baker Pim','🧑‍🍳','My cakes come out as flat as shields. I need <b>BAKING SODA</b> to make them rise!','NaHCO3',
-    'It is fluffy! It is HUGE! This cake is taller than I am!',{tip:'Six atoms. Its science name is sodium hydrogen carbonate.'}),
-  Q('Soapmaker Odo','🧖','The whole village is rather… fragrant. To make soap I need <b>LYE</b>, also called sodium hydroxide.','NaOH',
-    'Soap for everyone! The kingdom shall smell of lavender!',{unlock:['Ca'],rank:2}),
-  Q('Mason Grit','👷','Goblins knocked down the town wall. I need blocks of <b>LIMESTONE</b>. Scholars call it calcium carbonate.','CaCO3',
+  Q('Baker Pim','🧑‍🍳','The fort needs bread, and mine is as flat as a shield. I need <b>BAKING SODA</b>!','NaHCO3',
+    'It is HUGE! This loaf is taller than I am!',{tip:'Six atoms. Its long name is sodium hydrogen carbonate.'}),
+  Q('Soapmaker Odo','🧖','Ash on everything! To make soap I need <b>LYE</b> (sodium hydroxide).','NaOH',
+    'Soap for all! Mina is promoting you… to the front line. Sorry.',{unlock:['Ca'],rank:2}),
+  // 3 · Fort Ironwall
+  Q('Mason Grit','👷','Trolls smashed our wall! I need <b>LIMESTONE</b> (calcium carbonate).','CaCO3',
     'Solid as a rock! Because it is a rock!',{tip:'A "carbonate" is one carbon with three oxygens.'}),
-  Q('Healer Sana','🧝‍♀️','The knights keep scraping their knees. I need <b>HYDROGEN PEROXIDE</b> to clean their wounds.','H2O2',
-    'It bubbles on the scrape! The knights are crying, but they are clean.',{unlock:['Fe','S'],tip:'It is water with one extra oxygen.'}),
-  Q('Captain Rook','💂','A CURSE! My sword has turned red and crumbly! …You say it is only "<b>RUST</b>"? Prove it. Make some yourself.','Fe2O3',
-    'So it is just iron and oxygen… and I only had to dry my sword. How embarrassing.',{tip:'Two iron atoms, and more oxygens than irons.'}),
-  Q('Merchant Finn','🧑‍💼','I bought a whole cart of gold for three coppers! …Why are you looking at me like that? Show me what this "<b>FOOL\'S GOLD</b>" is made of.','FeS2',
-    'Iron and sulfur?! I have been swindled!',{unlock:['Si','Al'],rank:3}),
-  Q('Glassmaker Vitra','👩‍🎨','I want to give the chapel proper windows, but I have no <b>QUARTZ</b> sand to melt into glass.','SiO2',
-    'So clear! You can see right through it! What do you mean, "that is the point"?'),
-  Q('Princess Rubia','👸','I dropped my favourite <b>RUBY</b> down a dragon hole. Father says alchemists can make anything…','Al2O3',
-    'It is even shinier than the old one! I name you Royal Alchemist!',{unlock:['He','Ne'],rank:4,tip:'A ruby is aluminium oxide: two aluminiums, three oxygens.'}),
-  Q('Little Tobi','🧒','Excuse me, Alchemist! My balloon just sits on the floor. Do you know a gas lighter than air? Maybe <b>HELIUM</b>?','He',
-    'It is flying! IT IS FLYING! …It is gone. Can I have another one?',{tip:'Noble gases prefer to be alone. Completely alone.'}),
-  Q('Innkeeper Hobb','🧔','I want a sign that glows at night so travellers can find my inn. They say <b>NEON</b> shines when lightning touches it.','Ne',
-    'It glows! Every moth in the kingdom is now my customer!',{unlock:['K','Mg']}),
-  Q('Gardener Fern','🧑‍🌾','The Queen\'s roses are drooping. I need <b>SALTPETRE</b>, which is potassium nitrate, to feed them.','KNO3',
-    'They are blooming! One of them just bit me, but they are blooming!',{tip:'A "nitrate" is one nitrogen with three oxygens.'}),
-  Q('Captain Rook','💂','I wrestled a troll all day and everything hurts. A bath of <b>EPSOM SALT</b> would save me. It is magnesium sulfate.','MgSO4',
-    'Aaaah. I may never leave this bath.',{unlock:['Cu','Ag','F'],rank:5,tip:'A "sulfate" is one sulfur with four oxygens.'}),
-  Q('Court Wizard Zeb','🧙‍♂️','My staff needs a crystal of the deepest blue. Only <b>BLUE VITRIOL</b> will do. That is copper sulfate. Not that I am jealous of your powers.','CuSO4',
-    'Magnificent. I studied magic for sixty years and you just… tap things.'),
-  Q('Ember the Dragon','🐉','ROOOAR! …Sorry. Toothache. Too many sweets. Do you have anything that protects teeth? <b>SODIUM FLUORIDE</b>, maybe?','NaF',
-    'Minty! I shall brush twice a day. All eighty teeth.',{title:'Dragon Dentist'}),
-  Q('Queen Aurelia','🫅','The sky-shield above Elementia is tearing, and the sun scorches our fields. The old scrolls call the shield <b>OZONE</b>.','O3',
-    'The sky is healed! Ordinary oxygen with one more atom… who would have guessed?',{rank:6,tip:'Like oxygen gas, plus one.'}),
-  Q('The Demon Lord','😈','MORTAL! I have terrorised this land for 300 years because… my stomach BURNS. Too much acid! Bring me <b>MILK OF MAGNESIA</b> or face my wrath!','Mg(OH)2',
-    'The burning… it is gone. I am not angry any more. Perhaps I will open a bakery. Here, take my treasure.',{unlock:['Au'],rank:7,title:'Heartburn Hero',tip:'Magnesium with two "OH" groups. A base cancels an acid.'}),
-  Q('King Aurum','🤴','You saved the kingdom! One last request: my crown needs <b>GOLD</b>. Surely the great alchemist can make it out of turnips?','Au',
-    'It cannot be made from turnips? Or lead? Or anything?! Hmph. You are still the greatest hero in history.',{title:'Hero of Elementia',end:true,tip:'Gold is an element. Nothing else can become it. Luckily, the Demon Lord just gave you some.'}),
+  Q('Healer Sana','🧝‍♀️','So many scraped knights. I need <b>HYDROGEN PEROXIDE</b> to clean their wounds.','H2O2',
+    'It bubbles! The knights are crying, but they are clean.',{unlock:['Fe','S'],tip:'It is water with one extra oxygen.'}),
+  Q('Captain Rook','💂','The Demon Lord CURSED our swords! They turn red and crumble! You say it is just <b>RUST</b>? Prove it.','Fe2O3',
+    'Just iron and damp air? No curse at all… What else have we got wrong about him?',{tip:'Two iron atoms, and more oxygens than irons.'}),
+  Q('Paymaster Finn','🧑‍💼','I swapped our pay chest for a cart of gold! …Why the faces? Show me what <b>FOOL\'S GOLD</b> is.','FeS2',
+    'Iron and sulfur?! Swindled! Oh, and a royal messenger is here for you.',{unlock:['Si','Al'],rank:3}),
+  // 4 · Aurelis
+  Q('Glassmaker Vitra','👩‍🎨','Ash storms broke the palace windows. I need <b>QUARTZ</b> to make glass.','SiO2',
+    'So clear! Now the court can see the sky. They will not like it.'),
+  Q('Princess Rubia','👸','You are the useless hero! Oops, sorry. I lost my <b>RUBY</b>. Could you…?','Al2O3',
+    'Shinier than the old one! I name you Royal Alchemist!',{unlock:['He','Ne'],rank:4,tip:'A ruby is aluminium oxide: two aluminiums, three oxygens.'}),
+  Q('Little Tobi','🧒','My balloon will not float! Is there a gas lighter than air? <b>HELIUM</b>?','He',
+    'It is flying! …It is gone. Another one?',{tip:'Noble gases prefer to be alone. Completely alone.'}),
+  Q('Lamplighter Wick','🧑‍🚒','It is dark by lunchtime. They say <b>NEON</b> glows. I could light the whole city!','Ne',
+    'It glows! The streets are bright again!',{unlock:['K','Mg']}),
+  Q('Gardener Fern','🧑‍🌾','The Queen\'s roses are dying. I need <b>SALTPETRE</b> (potassium nitrate).','KNO3',
+    'They are blooming! The Queen will see you now.',{unlock:['Cu','Ag','F'],tip:'A "nitrate" is one nitrogen with three oxygens.'}),
+  Q('Court Wizard Zeb','🧙‍♂️','Ahem. I called you useless. I was wrong. To mend the sky I need <b>BLUE VITRIOL</b> (copper sulfate).','CuSO4',
+    'Sixty years of study, and you just… tap things. Come, the Queen is waiting.',{tip:'A "sulfate" is one sulfur with four oxygens.'}),
+  Q('Queen Aurelia','🫅','The smoke tore our sky-shield, and the sun is burning the land. The shield is called <b>OZONE</b>.','O3',
+    'The sky is whole! Now go to Cinder Keep and end this.',{rank:5,tip:'Like oxygen gas, plus one.'}),
+  // 5 · Cinder Keep
+  Q('Captain Rook','💂','I fought a troll so you could cross. Everything hurts. <b>EPSOM SALT</b> (magnesium sulfate), please…','MgSO4',
+    'Aaaah. Go on without me. I live in this bath now.'),
+  Q('Ember the Dragon','🐉','ROAR! NONE SHALL PASS! …Ow. Toothache. Do you have <b>SODIUM FLUORIDE</b> for teeth?','NaF',
+    'Minty! Climb on. I will fly you to the throne room.',{rank:6,title:'Dragon Dentist'}),
+  Q('Demon Lord Morgrath','😈','I have raged for 300 years because… my stomach BURNS! Too much acid! I need <b>MILK OF MAGNESIA</b>!','Mg(OH)2',
+    'It stopped. Nobody ever asked what was wrong. I will put the fires out. Maybe open a bakery.',{unlock:['Au'],rank:7,title:'Heartburn Hero',tip:'Magnesium with two "OH" groups. A base cancels out an acid.'}),
+  // 6 · The way home
+  Q('King Aurum','🤴','You stopped the smoke! One small thing: my crown needs <b>GOLD</b>. Can you make some from turnips?','Au',
+    'It cannot be made from anything?! Hmph. Zeb has something to show you.',{tip:'Gold is an element, so nothing else can become it. Luckily, Morgrath just gave you some.'}),
+  Q('Court Wizard Zeb','🧙‍♂️','This Gate can send you home, but it needs a flawless <b>DIAMOND</b>.','C8',
+    'Perfect. The Gate is open. It was an honour to be wrong about you.',{title:'Hero of Elementia',end:true,tip:'Diamond is pure carbon, packed tight. Fill the whole circle.'}),
 ];
 const CROWD=[
   '"They did not even chant a spell!"','The guild clerk faints.','"Is that SS-rank magic?!" "No. It is chemistry."','A bard starts writing a song about you.',
@@ -306,12 +415,12 @@ const CROWD=[
 ];
 const FIZZLE=['Pfffft. The atoms shrug and drift apart.','Fizzle! That is not a recipe this grimoire knows.','A sad little puff of smoke. Try another mix.','The circle hums… and gives up.','Nope! But failed experiments are how real scientists learn.'];
 const GUILD=[['Guild Clerk Mina','👩‍💼'],['A hooded traveller','🧙'],['Sir Dandelion','🤺'],['Granny Willow','👵'],['Apprentice Pip','🧑‍🎓'],['A talking cat','🐈']];
-const TITLES={start:'Reincarnated Student',noble:'Noble Effort',lonely:'Lonely Atoms',fizz:'Fizzle Master',roll:'On a Roll',diamond:'Diamond Hands',
+const TITLES={start:'Useless Hero',noble:'Noble Effort',lonely:'Lonely Atoms',fizz:'Fizzle Master',roll:'On a Roll',diamond:'Diamond Hands',
   free:'Free Thinker',table:'Walking Periodic Table',half:'Scholar of Elementia',all:'Grand Alchemist'};
 
 /* ───────────── Save ───────────── */
-const SAVE='isekai-alchemist-v1';
-const fresh=()=>({el:START.slice(),found:{},q:0,xp:0,gold:0,streak:0,best:0,fizz:0,free:0,rank:0,titles:[TITLES.start],hint:0,guild:null,done:0,mute:false,intro:false,seen:0});
+const SAVE='isekai-alchemist-v2';
+const fresh=()=>({el:START.slice(),found:{},q:0,xp:0,gold:0,streak:0,best:0,fizz:0,free:0,rank:0,titles:[TITLES.start],hint:0,guild:null,done:0,mute:false,intro:false,seen:0,chap:-1});
 let S=fresh();
 try{const d=JSON.parse(localStorage.getItem(SAVE));if(d&&Array.isArray(d.el))S=Object.assign(fresh(),d);}catch(e){}
 const save=()=>{try{localStorage.setItem(SAVE,JSON.stringify(S));}catch(e){}};
@@ -382,7 +491,7 @@ function renderTop(){
 function renderQuest(){
   const q=quest(),r=R[q.want];
   $('qface').textContent=q.face;
-  $('qwho').innerHTML=q.who+(q.guild?' <span>· Guild board</span>':` <span>· Quest ${S.q+1} of ${QUESTS.length}</span>`);
+  $('qwho').innerHTML=q.who+(q.guild?' <span>· Guild board</span>':` <span>· ${CHAPTERS[chapOf(S.q)].place} · quest ${S.q+1} of ${QUESTS.length}</span>`);
   $('qask').innerHTML=q.ask;
   let h='';
   if(S.hint>=1)h='Made of: '+Object.keys(r.c).map(s=>EL[s].name).join(' + ')+` · ${r.n} atom${r.n>1?'s':''}`;
@@ -391,6 +500,11 @@ function renderQuest(){
   $('qhint').innerHTML=h;
   $('hintbtn').disabled=S.hint>=2;
   $('hintbtn').textContent=S.hint===1?'🔍 Formula':'🔍 Appraise';
+}
+const chapOf=q=>{let c=0;CHAPTERS.forEach((ch,i)=>{if(q>=ch.at)c=i;});return c;};
+function renderJourney(){
+  const over=S.q>=QUESTS.length,c=chapOf(S.q);
+  $('journey').innerHTML=CHAPTERS.map((ch,i)=>`<span data-i="${i}" class="${over||i<c?'done':i===c?'now':''}">${over||i<c?'✓ ':''}${ch.place}</span>`).join('');
 }
 function renderTray(fresh){
   const t=$('tray');t.innerHTML='';
@@ -407,7 +521,7 @@ function renderReadout(){
   if(!atoms.length){r.className='empty';r.textContent='Tap elements below to drop atoms into the circle';}
   else{r.className='';r.textContent=formulaOf(counts());}
 }
-function renderAll(){renderTop();renderQuest();renderTray();renderReadout();}
+function renderAll(){renderTop();renderJourney();renderQuest();renderTray();renderReadout();}
 
 function addAtom(s,i,btn){
   if(anim)return;
@@ -456,7 +570,7 @@ function success(key){
   const before=lvlOf(S.xp);let xp=0,gold=0,newEl=null,ending=false;
   S.streak++;S.best=Math.max(S.best,S.streak);
   const m=mult();
-  if(isNew){S.found[key]=1;xp+=40+10*r.n;gold+=10;if(!isQuest)S.free++;}else xp+=5;
+  if(isNew){S.found[key]=1;xp+=40+10*r.n;gold+=10;if(!isQuest)S.free++;}
   if(isQuest){
     if(q.guild){xp+=40;gold+=25;S.done++;S.guild=null;}
     else{
@@ -486,16 +600,17 @@ function success(key){
   (isNew?sfx.disc:sfx.win)();
   save();
 
-  let h=`<div class="tag">${isNew?'✨ NEW DISCOVERY ✨':isQuest?'QUEST COMPLETE':'TRANSMUTED'}</div>
+  let h=`<div class="tag">${isNew?'✨ NEW DISCOVERY ✨':'QUEST COMPLETE'}</div>
     <div class="emo">${r.emo}</div><h2>${r.name}</h2><div class="bigf">${r.f}</div>
     <canvas id="mol" width="480" height="260" style="width:240px;height:130px"></canvas>
     <p class="fact">${r.fact}</p>`;
   if(isQuest)h+=`<div class="talk"><span class="f">${q.face}</span><span><b>${q.who}:</b> ${q.thanks}</span></div>`;
-  if(isNew||isQuest)h+=`<p class="crowd">${pick(CROWD)}</p>`;
+  if(isNew&&!isQuest)h+=`<p class="crowd">${pick(CROWD)}</p>`;
   h+=`<div class="chips">${chips.map((c,i)=>`<span class="chip ${c[0]}" style="animation-delay:${.25+i*.12}s">${c[1]}</span>`).join('')}</div>`;
-  if(ending)h+=`<p><b>🎉 The story is complete!</b><br>The Guild Board will now post endless requests, and the Grimoire still hides ${TOTAL-n} secret recipe${TOTAL-n===1?'':'s'}. Fill every page to reach the legendary <b>SSS rank</b>.</p>`;
+  if(ending)h+=`<p>Through the Gate you can see your own street. Behind you: a dragon, a Demon Lord baking bread, and a Guild full of friends.<br><b>Home can wait.</b></p>
+    <p style="font-size:13px;color:var(--dim)">🎉 Story complete! The Guild Board has endless requests, and ${TOTAL-n} recipe${TOTAL-n===1?' is':'s are'} still hidden in the Grimoire.</p>`;
   h+=`<button class="ok" id="okb">${isQuest&&!ending?'Next quest →':'Continue'}</button>`;
-  open(h,'',()=>{renderAll();if(newEl&&newEl.length){renderTray(newEl);say('New elements unlocked! Try them out.',true);}});
+  open(h,'',()=>{renderAll();if(newEl&&newEl.length){renderTray(newEl);say('New elements unlocked! Try them out.',true);}chapter();});
   drawMol($('mol'),r.c);
   renderTop();
 }
@@ -510,19 +625,27 @@ function close(){$('modal').classList.add('hide');const f=onClose;onClose=null;i
 
 function intro(page){
   const P=[
-    ['📚','Midnight.','Your chemistry exam is tomorrow. You rest your head on the periodic table for just one second…'],
-    ['🌙','…and wake up under two moons.','Welcome to the Kingdom of <b>Elementia</b>: a land of swords, dragons and magic, where nobody has ever heard of an atom.'],
+    ['street','An ordinary evening','You are walking home when the ground starts to glow…'],
+    ['throne','…and you land in another world','A magic kingdom has pulled you here to be its <b>hero</b>. A Demon Lord is choking the land with smoke, and they need you to stop him.'],
+    ['crystal','They test your powers','No strength. No magic. The wizard calls you useless, and they send you away to a tiny village.'],
+    ['atoms','But you have a secret power','You can see <b>atoms</b>, the tiny pieces everything is made of, and snap them together to make anything. Nobody else in this world can.'],
   ];
-  if(page<P.length){
-    const p=P[page];
-    open(`<div class="emo">${p[0]}</div><h2>${p[1]}</h2><p>${p[2]}</p><button class="ok" id="okb">Next →</button>`,'',()=>intro(page+1));
-  }else{
-    open(`<div class="tag" style="color:var(--cyan)">[ SYSTEM MESSAGE ]</div><h2>Unique skill acquired:<br><span style="color:var(--cyan)">PERIODIC TABLE</span></h2>
-      <p>You can see what everything is made of, and build it atom by atom. In this world, that makes you <b>ridiculously overpowered</b>.</p>
-      <p style="font-size:14px;color:var(--dim)">Tap elements to drop atoms into the circle, then press <b>Transmute</b>. Help the people of Elementia, and try your own mixes too: every real compound you discover goes into your Grimoire.</p>
-      <div style="text-align:center"><button class="ok" id="okb">Begin the adventure</button></div>`,'sys',()=>{S.intro=true;save();});
-    sfx.win();
-  }
+  const p=P[page],last=page===P.length-1;
+  open(`${ART[p[0]]}<h2>${p[1]}</h2><p>${p[2]}</p>${last?'<p class="fact" style="text-align:center">🎯 <b>Reach the Demon Lord and stop the smoke.</b></p>':''}
+    <button class="ok" id="okb">${last?'Begin':'Next →'}</button>`,'',last?()=>{S.intro=true;save();chapter();}:()=>intro(page+1));
+  if(last)sfx.win();
+}
+// Shows a chapter card: automatically the first time the story reaches a new place, or when asked for (idx)
+function chapter(idx){
+  const again=idx!=null,over=S.q>=QUESTS.length;
+  if(over&&!again)return;
+  const c=again?idx:chapOf(S.q);
+  if(!again){if(S.chap===c)return;S.chap=c;save();}
+  const ch=CHAPTERS[c];
+  open(`${ART[ch.art]}<div class="tag">CHAPTER ${c+1} · ${ch.place.toUpperCase()}</div><h2>${ch.title}</h2>
+    <p>${ch.text}</p><p class="fact" style="text-align:center">🎯 <b>${ch.goal}</b></p>
+    <button class="ok" id="okb">${again?'Close':'Go →'}</button>`);
+  if(!again)sfx.win();
 }
 function grimoire(tab){
   S.seen=nFound();save();renderTop();
@@ -549,13 +672,14 @@ function status(){
   const l=lvlOf(S.xp);
   open(`<div class="tag" style="color:var(--cyan)">[ STATUS WINDOW ]</div>
     <div class="row"><span>Name</span><b>The Alchemist</b></div>
-    <div class="row"><span>Class</span><b>Reincarnated Chemistry Student</b></div>
+    <div class="row"><span>Class</span><b>Alchemist (officially: Useless)</b></div>
+    <div class="row"><span>Main quest</span><b>${S.q>=QUESTS.length?'Complete!':'Stop the smoke'}</b></div>
     <div class="row"><span>Adventurer rank</span><b>${RANKS[S.rank]}</b></div>
     <div class="row"><span>Level</span><b>${l}</b></div>
     <div class="row"><span>Strength</span><b>3</b></div>
     <div class="row"><span>Magic</span><b>0 (not needed)</b></div>
-    <div class="row"><span>Chemistry</span><b>${(9000+S.xp).toLocaleString()} (off the scale)</b></div>
-    <div class="row"><span>Unique skill</span><b>Periodic Table</b></div>
+    <div class="row"><span>Alchemy</span><b>${(9000+S.xp).toLocaleString()} (off the scale)</b></div>
+    <div class="row"><span>Unique skill</span><b>Atom Sight</b></div>
     <h3>Record</h3>
     <div class="row"><span>Story quests</span><b>${Math.min(S.q,QUESTS.length)} / ${QUESTS.length}</b></div>
     <div class="row"><span>Guild requests filled</span><b>${S.done}</b></div>
@@ -628,7 +752,11 @@ function frame(now){
 
   if(anim&&p>=1){
     const a=anim;anim=null;
-    if(a.ok){
+    if(a.ok&&S.found[a.key]&&quest().want!==a.key){
+      // Already in the Grimoire and nobody asked for it: no reward
+      const r=R[a.key];atoms=[];renderReadout();sfx.rem();
+      say(`${r.name} (${r.f}) is already in your Grimoire. No XP for repeats. Try something new!`,true);
+    }else if(a.ok){
       flash=1;
       const cols=atoms.map(x=>EL[x.s].col).concat(['#ffd166','#fff']);
       for(let i=0;i<90;i++){const an=Math.random()*TAU,v=60+Math.random()*320;parts.push({x:cx,y:cyy,vx:Math.cos(an)*v,vy:Math.sin(an)*v,life:1,max:.7+Math.random()*.7,col:pick(cols),r:2+Math.random()*4,spark:1});}
@@ -672,7 +800,7 @@ cv.addEventListener('pointerdown',e=>{
   if(best>=0)removeAtom(best);
 });
 $('go').onclick=transmute;$('clear').onclick=clearAtoms;$('undo').onclick=()=>removeAtom(-1);
-$('bGrim').onclick=()=>grimoire(0);$('bStat').onclick=status;
+$('journey').onclick=e=>{const i=e.target.dataset.i;if(!anim&&i!=null&&(S.q>=QUESTS.length||+i<=chapOf(S.q)))chapter(+i);};$('bGrim').onclick=()=>grimoire(0);$('bStat').onclick=status;
 $('bSnd').onclick=()=>{S.mute=!S.mute;save();renderTop();if(!S.mute)sfx.add(0);};
 $('hintbtn').onclick=()=>{if(S.hint<2){S.hint++;save();renderQuest();sfx.add(7);}};
 addEventListener('keydown',e=>{
@@ -687,7 +815,7 @@ addEventListener('resize',resize);
 if(window.ResizeObserver)new ResizeObserver(resize).observe($('stage'));
 
 renderAll();resize();requestAnimationFrame(frame);
-if(!S.intro)intro(0);
+if(!S.intro)intro(0);else chapter();
 })();
 </script>
 </body>
