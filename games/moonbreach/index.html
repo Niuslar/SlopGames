@@ -1,6 +1,28 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<script>
+/* iOS Safari audio unlock: play through the silent switch, and resume suspended contexts on a real tap */
+(function(){
+  try{ if(navigator.audioSession) navigator.audioSession.type='playback'; }catch(e){}
+  var Base=window.AudioContext||window.webkitAudioContext; if(!Base) return;
+  var ctxs=[];
+  function Ctx(o){ var c=o?new Base(o):new Base(); ctxs.push(c); return c; }
+  Ctx.prototype=Base.prototype;
+  window.AudioContext=window.webkitAudioContext=Ctx;
+  function unlock(){
+    ctxs.forEach(function(c){
+      try{
+        if(c.state!=='running'){ var p=c.resume(); if(p&&p.catch) p.catch(function(){}); }
+        var b=c.createBuffer(1,1,22050), s=c.createBufferSource(); s.buffer=b; s.connect(c.destination); s.start(0);
+      }catch(e){}
+    });
+  }
+  ['touchend','click','keydown'].forEach(function(t){ addEventListener(t,unlock,true); });
+  document.addEventListener('visibilitychange',function(){ if(!document.hidden) unlock(); });
+})();
+</script>
+
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
 <title>Moonbreach</title>
