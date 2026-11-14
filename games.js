@@ -14,4 +14,16 @@ window.SLOP_GAMES = [
     added: "2026-11-14",              // YYYY-MM-DD
     thumbnail: "games/moonbreach/moonbreach-thumbnail.jpeg"                     // optional: e.g. "games/moonbreach/thumb.png" (16:9)
   },
+  {
+    slug: "isekai-alchemist",
+    title: "Isekai Alchemist",
+    description: "Pulled into a magic kingdom to be its hero, then thrown out as useless: no strength, no magic. But you can see atoms. Snap them together into real compounds, cross the kingdom and stop the Demon Lord's smoke.",
+    author: "SlopGames",
+    authorUrl: "",
+    madeWith: "Claude",
+    tags: ["puzzle", "educational", "relaxing", "mobile"],
+    controls: "Mouse or touch (Enter to transmute)",
+    added: "2026-11-14",
+    thumbnail: "games/isekai-alchemist/thumb.svg"
+  },
 ];
