@@ -440,6 +440,63 @@ function tone(f,at,d,type,v){
     o.connect(g);g.connect(AC.destination);o.start(t);o.stop(t+d);
   }catch(e){}
 }
+/* ───────────── Music: a little tavern tune in D dorian, 6/8 ─────────────
+   Plucked lute (Karplus–Strong), a wooden flute melody, a low drone and a hand drum. */
+const mtof=m=>440*Math.pow(2,(m-69)/12);
+const CHORDS={Dm:[50,57,62,65],C:[48,55,60,64],Am:[45,52,57,60],F:[41,48,53,57],G:[43,50,55,59]};
+const TUNE={ // each bar: chord + melody as [midi,eighths] (0 = rest)
+  A:[['Dm',[[69,2],[74,1],[74,2],[76,1]]],['C',[[76,2],[74,1],[72,2],[67,1]]],['Dm',[[69,2],[67,1],[65,2],[64,1]]],['Am',[[64,2],[67,1],[69,3]]],
+     ['Dm',[[69,2],[74,1],[74,2],[76,1]]],['C',[[77,2],[76,1],[72,2],[76,1]]],['F',[[77,2],[76,1],[74,1],[72,2]]],['Dm',[[74,5],[0,1]]]],
+  B:[['F',[[77,2],[72,1],[69,2],[72,1]]],['C',[[76,2],[72,1],[67,2],[72,1]]],['Dm',[[74,2],[77,1],[76,2],[74,1]]],['Am',[[76,3],[72,2],[69,1]]],
+     ['G',[[71,2],[74,1],[79,2],[74,1]]],['C',[[76,2],[74,1],[72,2],[71,1]]],['Am',[[69,2],[72,1],[71,2],[67,1]]],['Dm',[[69,2],[67,1],[62,3]]]],
+};
+const FORM='AABA', EIGHTH=.21, ARP=[0,1,2,3,2,1];
+let MUS=null;
+function ac(){try{AC=AC||new (window.AudioContext||window.webkitAudioContext)();if(AC.state==='suspended')AC.resume();}catch(e){}return AC;}
+const pluckBuf={};
+function pluck(m,t,v){ // Karplus–Strong string, cached per pitch
+  if(!pluckBuf[m]){const sr=AC.sampleRate,len=Math.floor(sr*1.6),b=AC.createBuffer(1,len,sr),d=b.getChannelData(0),P=Math.round(sr/mtof(m));
+    for(let i=0;i<len;i++)d[i]=i<P?Math.random()*2-1:(d[i-P]+(i>P?d[i-P-1]:0))*.497;
+    pluckBuf[m]=b;}
+  const s=AC.createBufferSource(),g=AC.createGain();s.buffer=pluckBuf[m];g.gain.setValueAtTime(v,t);g.gain.setValueAtTime(v,t+1.1);g.gain.linearRampToValueAtTime(0,t+1.55);s.connect(g);g.connect(MUS.bus);s.start(t);s.stop(t+1.6);}
+function flute(m,t,d,v){
+  const o=AC.createOscillator(),o2=AC.createOscillator(),g=AC.createGain(),g2=AC.createGain(),lfo=AC.createOscillator(),lg=AC.createGain();
+  o.type='sine';o2.type='triangle';o.frequency.value=mtof(m);o2.frequency.value=mtof(m)*2;g2.gain.value=.18;
+  lfo.frequency.value=5.2;lg.gain.value=mtof(m)*.004;lfo.connect(lg);lg.connect(o.frequency);lg.connect(o2.frequency);
+  const end=t+Math.max(.12,d-.03);
+  g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(v,t+.045);g.gain.setValueAtTime(v*.85,end-.05);g.gain.linearRampToValueAtTime(0,end+.06);
+  o.connect(g);o2.connect(g2);g2.connect(g);g.connect(MUS.bus);
+  [o,o2,lfo].forEach(x=>{x.start(t);x.stop(end+.1);});}
+function drum(t,v){
+  const o=AC.createOscillator(),g=AC.createGain();o.frequency.setValueAtTime(110,t);o.frequency.exponentialRampToValueAtTime(52,t+.14);
+  g.gain.setValueAtTime(v,t);g.gain.exponentialRampToValueAtTime(.001,t+.28);o.connect(g);g.connect(MUS.bus);o.start(t);o.stop(t+.3);}
+function startMusic(){
+  if(MUS||S.mute||!ac())return;
+  const out=AC.createGain(),bus=AC.createGain(),dl=AC.createDelay(1),fb=AC.createGain(),wet=AC.createGain(),lp=AC.createBiquadFilter();
+  out.gain.setValueAtTime(0,AC.currentTime);out.gain.linearRampToValueAtTime(.55,AC.currentTime+3);
+  lp.type='lowpass';lp.frequency.value=3200;dl.delayTime.value=EIGHTH*3;fb.gain.value=.28;wet.gain.value=.22;
+  bus.connect(lp);lp.connect(out);lp.connect(dl);dl.connect(fb);fb.connect(dl);dl.connect(wet);wet.connect(out);out.connect(AC.destination);
+  // drone: open fifth on D, very quiet, like a far-off hurdy-gurdy
+  const dg=AC.createGain(),df=AC.createBiquadFilter();df.type='lowpass';df.frequency.value=380;dg.gain.value=.022;df.connect(dg);dg.connect(bus);
+  [38,45,50].forEach(m=>{const o=AC.createOscillator();o.type='sawtooth';o.frequency.value=mtof(m);o.detune.value=Math.random()*8-4;o.connect(df);o.start();});
+  MUS={out,bus,next:AC.currentTime+.3,sec:0,bar:0,lead:'flute'};
+  setInterval(schedMusic,120);schedMusic();}
+function schedMusic(){
+  if(!MUS||AC.state!=='running')return;
+  if(MUS.next<AC.currentTime)MUS.next=AC.currentTime+.1;
+  while(MUS.next<AC.currentTime+.8){
+    const part=TUNE[FORM[MUS.sec]],[ch,mel]=part[MUS.bar],c=CHORDS[ch],t=MUS.next,rest=MUS.lead==='rest';
+    ARP.forEach((k,i)=>pluck(c[k]+12,t+i*EIGHTH+(Math.random()*.012),i?.22:.32));
+    pluck(c[0],t,.3);
+    drum(t,.32);drum(t+3*EIGHTH,.18);if(Math.random()<.35)drum(t+5*EIGHTH,.09);
+    let e=0;for(const [m,n] of mel){if(m&&!rest){if(MUS.lead==='flute')flute(m,t+e*EIGHTH,n*EIGHTH,.075);else pluck(m+12,t+e*EIGHTH,.42);}e+=n;}
+    MUS.next+=6*EIGHTH;
+    if(++MUS.bar>=8){MUS.bar=0;MUS.sec=(MUS.sec+1)%FORM.length; // vary who carries the tune each section
+      const r=Math.random();MUS.lead=MUS.sec===0&&r<.3?'rest':r<.7?'flute':'lute';}
+  }}
+function setMusicMute(m){if(m){if(MUS)MUS.out.gain.setTargetAtTime(0,AC.currentTime,.15);}else if(MUS)MUS.out.gain.setTargetAtTime(.55,AC.currentTime,.3);else startMusic();}
+addEventListener('pointerdown',startMusic);addEventListener('keydown',startMusic);
+
 const sfx={
   add:i=>tone(260*Math.pow(2,(i%12)/12),0,.18,'triangle',.12),
   rem:()=>tone(180,0,.1,'triangle',.08),
@@ -801,7 +858,7 @@ cv.addEventListener('pointerdown',e=>{
 });
 $('go').onclick=transmute;$('clear').onclick=clearAtoms;$('undo').onclick=()=>removeAtom(-1);
 $('journey').onclick=e=>{const i=e.target.dataset.i;if(!anim&&i!=null&&(S.q>=QUESTS.length||+i<=chapOf(S.q)))chapter(+i);};$('bGrim').onclick=()=>grimoire(0);$('bStat').onclick=status;
-$('bSnd').onclick=()=>{S.mute=!S.mute;save();renderTop();if(!S.mute)sfx.add(0);};
+$('bSnd').onclick=()=>{S.mute=!S.mute;save();renderTop();setMusicMute(S.mute);if(!S.mute)sfx.add(0);};
 $('hintbtn').onclick=()=>{if(S.hint<2){S.hint++;save();renderQuest();sfx.add(7);}};
 addEventListener('keydown',e=>{
   const modal=!$('modal').classList.contains('hide');
