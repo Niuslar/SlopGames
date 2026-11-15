@@ -52,6 +52,18 @@
   .meta span{background:var(--chip);padding:2px 8px;border-radius:6px}
   .empty{color:var(--muted);text-align:center;padding:60px 0}
   footer{color:var(--muted);font-size:14px;padding:48px 0 32px;text-align:center}
+  footer button{font:inherit;color:inherit;background:none;border:0;padding:0;text-decoration:underline;cursor:pointer}
+  dialog{width:min(480px,calc(100vw - 32px));padding:0;border:1px solid var(--line);border-radius:16px;background:var(--surface);color:var(--ink);box-shadow:var(--shadow)}
+  dialog::backdrop{background:#0008}
+  .dlg{padding:24px 24px 20px;position:relative}
+  .dlg h2{margin:0 0 6px;font-size:22px;letter-spacing:-.01em}
+  .dlg p{margin:0 0 12px;color:var(--muted);font-size:15px}
+  .dlg ol{margin:0 0 12px;padding-left:20px;font-size:15px}
+  .dlg li{margin:4px 0}
+  .dlg code{font-size:13px;background:var(--chip);padding:1px 5px;border-radius:5px}
+  .dlg .actions{display:flex;gap:10px;justify-content:flex-end;margin-top:18px;flex-wrap:wrap}
+  .dlg .x{position:absolute;top:10px;right:10px;border:0;background:none;color:var(--muted);font-size:22px;line-height:1;padding:6px 10px;cursor:pointer;border-radius:8px}
+  .dlg .x:hover{background:var(--chip)}
 </style>
 </head>
 <body>
@@ -66,6 +78,7 @@
         <option value="az">A–Z</option>
       </select>
       <button class="btn primary" id="random" type="button">🎲 Random</button>
+      <button class="btn" id="contribute" type="button">＋ Add your game</button>
     </div>
     <div class="chips" id="chips"></div>
   </header>
@@ -76,9 +89,27 @@
   </main>
 
   <footer>
-    <span id="count"></span> · Made by its players
+    <span id="count"></span> · Made by its players · <button type="button" id="contribute2">Add your game</button>
   </footer>
 </div>
+
+<dialog id="contrib" aria-labelledby="contrib-title">
+  <div class="dlg">
+    <button class="x" type="button" data-close aria-label="Close">×</button>
+    <h2 id="contrib-title">Add your game</h2>
+    <p>Made a small game with AI? Add it to the arcade with one pull request.</p>
+    <ol>
+      <li>Fork the repo and put your game in <code>games/your-slug/index.html</code>.</li>
+      <li>Add an entry for it to <code>games.js</code>.</li>
+      <li>Open a PR titled <code>Add game: Your Title</code>.</li>
+    </ol>
+    <p>Your game should run in the browser with no build step, load nothing from other sites (no trackers, ads or remote APIs), stay under 5&nbsp;MB, be safe for everyone, and be your own idea, not a clone. Automatic checks run on every PR.</p>
+    <div class="actions">
+      <button class="btn" type="button" data-close>Close</button>
+      <a class="btn primary" href="https://github.com/Niuslar/SlopGames#adding-a-game" target="_blank" rel="noopener">Read the guide on GitHub ↗</a>
+    </div>
+  </div>
+</dialog>
 
 <script src="games.js"></script>
 <script>
@@ -144,6 +175,10 @@
     const pool = visible().length ? visible() : games;
     if (pool.length) location.href = url(pool[Math.floor(Math.random() * pool.length)]);
   });
+
+  const dlg = $("contrib");
+  ["contribute", "contribute2"].forEach(id => $(id).addEventListener("click", () => dlg.showModal()));
+  dlg.addEventListener("click", e => { if (e.target === dlg || e.target.closest("[data-close]")) dlg.close(); });
 
   renderChips(); render();
 })();
