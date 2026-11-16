@@ -94,8 +94,8 @@
       <li><span class="ic">←&thinsp;↑&thinsp;↓&thinsp;→</span><div><b>Swipe</b>, press an <b>arrow key</b> or <b>click a side</b> of the field. Every atom is blown as far as it can go.</div></li>
       <li><span class="ic"><canvas data-z="1"></canvas><canvas data-z="1"></canvas><canvas data-z="1"></canvas></span><div><b>3 or more</b> of the same atom that touch <b>fuse</b> into the next element: hydrogen makes helium, helium makes lithium, and so on.</div></li>
       <li><span class="ic"><canvas data-z="2"></canvas><canvas data-z="3"></canvas><canvas data-z="4"></canvas></span><div>The new atom can fuse again straight away. Set up a <b>chain</b> for ×2, ×3 and more.</div></li>
-      <li><span class="ic"><canvas data-g="1"></canvas></span><div><b>Faint atoms</b> show what appears after your next gust. Blow an atom onto one and it appears somewhere else.</div></li>
-      <li><span class="ic">+2</span><div>Fuse <b>5 or more</b> at once to skip an element. The star dies when the field is full.</div></li>
+      <li><span class="ic"><canvas data-g="1"></canvas></span><div>The <b>faint atom</b> shows what appears after your next gust. Blow an atom onto it and it appears somewhere else.</div></li>
+      <li><span class="ic">+2</span><div>Fuse <b>5 or more</b> at once to skip an element. Can you reach <b>argon</b>, number 18? The star dies when the field is full.</div></li>
     </ul>
     <button type="button" class="go" id="helpgo">Play</button>
   </div>
@@ -130,13 +130,12 @@ const ELEMENTS = [null, ["H", "Hydrogen"], ["He", "Helium"], ["Li", "Lithium"], 
   ["Cl", "Chlorine"], ["Ar", "Argon"]];
 const MAX_Z = ELEMENTS.length - 1;
 
-// What drifts in each turn depends on the heaviest element made so far.
-function spawnRules(top) {
-  return {
-    count: top < 2 ? 2 : top < 4 ? 3 : top < 6 ? 4 : top < 8 ? 5 : 6,
-    helium: top < 3 ? 0 : 0.3,                      // chance that a new atom is helium
-    lithium: top < 5 ? 0 : 0.12,                    // ... or lithium
-  };
+// One new atom drifts in each turn, picked evenly from a small range of elements below the heaviest one made so far.
+// A new game gets hydrogen only. The range then widens to four elements and climbs as the star does: once you have
+// made nitrogen (7) hydrogen stops arriving, and so on. This is what keeps the last element, argon, within reach.
+function pickAtom(top, rng) {
+  const lo = Math.max(1, top - 5), hi = Math.max(lo, Math.min(top - 1, lo + 3));
+  return lo + Math.floor(rng() * (hi - lo + 1));
 }
 
 function emptyCells(grid) {
@@ -186,22 +185,14 @@ function findGroups(grid) {
   return groups;
 }
 
-// Heavier elements are worth far more: each step up the table doubles the points.
-function fusePoints(newZ, size, chain) { return 10 * size * 2 ** Math.min(newZ - 2, 20) * chain; }
+// Heavier elements are worth far more: the points grow with the square of the atomic number.
+function fusePoints(newZ, size, chain) { return 5 * size * newZ * newZ * chain; }
 
-function pickAtom(top, rng) {
-  const rules = spawnRules(top), r = rng();
-  return r < rules.lithium ? 3 : r < rules.lithium + rules.helium ? 2 : 1;
-}
-
-// Mark the cells where new atoms will condense after the next gust.
+// Mark the cell where the new atom will condense after the next gust.
 function seedSprouts(state, rng) {
-  const rules = spawnRules(state.top), free = emptyCells(state.grid);
+  const free = emptyCells(state.grid);
   state.sprouts = [];
-  for (let n = 0; n < rules.count && free.length; n++) {
-    const i = free.splice(Math.floor(rng() * free.length), 1)[0];
-    state.sprouts.push({ i, c: pickAtom(state.top, rng) });
-  }
+  if (free.length) state.sprouts.push({ i: free[Math.floor(rng() * free.length)], c: pickAtom(state.top, rng) });
   return state.sprouts.map(s => ({ i: s.i, c: s.c }));
 }
 
@@ -249,7 +240,7 @@ function resolve(state, dir, steps, turn) {
   }
 }
 
-// New atoms condense where they were marked. If an atom was blown onto the mark, the new one appears in a free cell instead.
+// The new atom condenses where it was marked. If an atom was blown onto the mark, it appears in a free cell instead.
 function growSprouts(state, steps, rng) {
   const before = state.grid.slice(), grown = [], covered = [];
   for (const s of state.sprouts) {
@@ -277,7 +268,7 @@ function playMove(state, dir, rng) {
   resolve(state, dir, steps, turn);
   growSprouts(state, steps, rng);
   resolve(state, dir, steps, turn);
-  // An empty field would leave nothing to blow around, so let the next atoms appear straight away
+  // An empty field would leave nothing to blow around, so let the next atom appear straight away
   for (let guard = 0; guard < 20 && state.grid.every(v => !v); guard++) {
     steps.push({ type: "seed", sprouts: seedSprouts(state, rng), grid: state.grid.slice() });
     growSprouts(state, steps, rng);
@@ -457,8 +448,8 @@ const DURATION = { slide: 150, fuse: 360, grow: 260, seed: 170, over: 0 };
 function validSave(s) {
   return !!s && typeof s === "object" && Array.isArray(s.grid) && s.grid.length === CELLS &&
     s.grid.every(v => Number.isInteger(v) && v >= 0 && v <= MAX_Z) &&
-    Array.isArray(s.sprouts) && s.sprouts.length <= CELLS &&
-    s.sprouts.every(p => p && Number.isInteger(p.i) && p.i >= 0 && p.i < CELLS && Number.isInteger(p.c) && p.c >= 1 && p.c <= 3 && !s.grid[p.i]) &&
+    Array.isArray(s.sprouts) && s.sprouts.length <= 1 &&
+    s.sprouts.every(p => p && Number.isInteger(p.i) && p.i >= 0 && p.i < CELLS && Number.isInteger(p.c) && p.c >= 1 && p.c <= MAX_Z && !s.grid[p.i]) &&
     new Set(s.sprouts.map(p => p.i)).size === s.sprouts.length &&
     ["score", "top", "fusions", "moves", "bestChain"].every(k => Number.isFinite(s[k]) && s[k] >= 0) &&
     Number.isInteger(s.top) && s.top >= 1 && s.top <= MAX_Z && s.top >= Math.max(...s.grid) &&
@@ -487,7 +478,7 @@ function setTip() {
   el.textContent =
     m < 2 ? (coarse ? "Swipe anywhere to send a gust of wind" : "Use the arrow keys, or click a side of the field") :
     m < 6 ? "Bring 3 of the same atom together to fuse them" :
-    m < 12 ? "Faint atoms appear after your next gust. Plan ahead!" :
+    m < 12 ? "The faint atom appears after your next gust. Plan ahead!" :
     m < 18 ? "Fuse 5 or more at once to skip an element" :
     m < 26 ? "Keep heavy atoms together so they can meet again" : "";
 }
@@ -605,7 +596,7 @@ function startFuse(s) {
   else if (s.chain > 1) callout = { text: PRAISE[Math.min(s.chain, PRAISE.length - 1)] + " ×" + s.chain, sub: "", t: 0 };
   if (s.discovered.length) {
     const z = s.discovered[s.discovered.length - 1];
-    banner = { text: ELEMENTS[z][1] + "!", sub: "New heaviest element · number " + z, t: 0 };
+    banner = { text: ELEMENTS[z][1] + "!", sub: z === MAX_Z ? "The last element. Your star is complete!" : "New heaviest element · number " + z, t: 0 };
     sfx.discover();
   }
 }
