@@ -1,0 +1,955 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<title>Solar Gust</title>
+<style>
+  :root{--bg:#0c0e1d;--panel:#161a33;--ink:#f1f3fb;--muted:#99a2c6;--accent:#ffd76a;--line:#2b3160}
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;height:100%;overflow:hidden;background:var(--bg);color:var(--ink);
+    font:16px/1.3 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;overscroll-behavior:none;
+    user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;touch-action:none}
+  #app{position:fixed;inset:0;display:flex;flex-direction:column;
+    padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
+  #hud{flex:0 0 auto;display:flex;gap:8px;align-items:stretch;padding:10px 12px 2px;width:100%;max-width:600px;margin:0 auto}
+  .stat{flex:1 1 0;min-width:0;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:6px 10px 7px}
+  .stat small{display:block;color:var(--muted);font-size:11px;letter-spacing:.08em;text-transform:uppercase;white-space:nowrap;overflow:hidden}
+  .stat b{display:block;font-size:20px;font-weight:800;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .stat b.bump{animation:bump .3s ease-out}
+  /* The heaviest element is spelled out where there is room, and shortened to its symbol and number where not */
+  #top .short{display:none}
+  @keyframes bump{30%{transform:scale(1.18);color:var(--accent)}}
+  .btns{flex:0 0 auto;display:flex;gap:6px}
+  button{font:inherit;color:var(--ink);cursor:pointer;touch-action:manipulation}
+  .btns button{width:40px;border-radius:12px;background:var(--panel);border:1px solid var(--line);font-size:18px;font-weight:700;padding:0;position:relative}
+  .btns button:hover,.btns button:focus-visible{border-color:var(--accent);outline:none}
+  #new.sure{width:64px;font-size:13px;border-color:var(--accent);color:var(--accent)}
+  #snd.off{color:var(--muted)}
+  #snd.off::after{content:"";position:absolute;left:9px;right:9px;top:50%;height:2px;background:var(--muted);transform:rotate(-45deg)}
+  #stage{flex:1 1 auto;min-height:0;min-width:0;position:relative}
+  canvas#cv{position:absolute;inset:0;width:100%;height:100%;display:block}
+  #tip{flex:0 0 auto;text-align:center;color:var(--muted);font-size:13px;padding:2px 12px 10px;height:30px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .overlay{position:fixed;inset:0;display:none;place-items:center;background:rgba(6,7,16,.8);z-index:5;padding:14px}
+  .overlay.on{display:grid}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:20px 20px 18px;width:100%;max-width:410px;
+    max-height:100%;overflow:auto;touch-action:pan-y;box-shadow:0 18px 60px rgba(0,0,0,.55);animation:rise .25s ease-out}
+  @keyframes rise{from{transform:translateY(14px)}}
+  .card h1{margin:0 0 4px;font-size:26px;letter-spacing:.01em}
+  .card p{margin:0 0 12px;color:var(--muted)}
+  .card ul{list-style:none;margin:0 0 16px;padding:0}
+  .card li{display:flex;gap:10px;align-items:center;margin:10px 0;font-size:15px}
+  .card li span.ic{flex:0 0 88px;display:flex;justify-content:center;align-items:center;font-size:17px;white-space:nowrap;color:var(--accent)}
+  .card li canvas{width:28px;height:28px}
+  .card li b{color:var(--accent);font-weight:700}
+  .go{display:block;width:100%;border:0;border-radius:12px;padding:12px;font-size:17px;font-weight:800;background:var(--accent);color:#2a2105}
+  .go:hover,.go:focus-visible{filter:brightness(1.08);outline:2px solid #fff;outline-offset:2px}
+  .nums{display:flex;gap:8px;margin:14px 0 16px}
+  .nums .stat{background:#10132a}
+  #newbest{display:none;color:var(--accent);font-weight:800;margin:0 0 4px}
+  #newbest.on{display:block}
+  @media (orientation:landscape) and (max-height:520px){
+    #app{flex-direction:row}
+    #hud{flex-direction:column;width:150px;margin:0;padding:10px 0 10px 12px;justify-content:center}
+    .stat{flex:0 0 auto}
+    .btns{height:40px}
+    .btns button{flex:1}
+    #tip{display:none}
+    #top .long{display:none}
+    #top .short{display:inline}
+  }
+  /* Phones held upright: the three numbers get a full row, the buttons sit under them */
+  @media (max-width:520px) and (orientation:portrait){
+    #hud{flex-wrap:wrap}
+    .stat{flex:1 1 28%}
+    .btns{flex:1 1 100%;justify-content:flex-end;height:36px}
+    .btns button{width:46px}
+    #new.sure{width:70px}
+    #top .long{display:none}
+    #top .short{display:inline}
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="hud">
+    <div class="stat"><small>Score</small><b id="score">0</b></div>
+    <div class="stat"><small>Best</small><b id="best">0</b></div>
+    <div class="stat"><small>Heaviest</small><b id="top"><span class="long">Hydrogen</span><span class="short">H · 1</span></b></div>
+    <div class="btns">
+      <button type="button" id="snd" title="Sound" aria-label="Sound on or off">♪</button>
+      <button type="button" id="how" title="How to play" aria-label="How to play">?</button>
+      <button type="button" id="new" title="New game" aria-label="New game">↻</button>
+    </div>
+  </div>
+  <div id="stage"><canvas id="cv"></canvas></div>
+  <div id="tip"></div>
+</div>
+
+<div class="overlay" id="help">
+  <div class="card">
+    <h1>Solar Gust</h1>
+    <p>You are the wind inside a star. Fuse hydrogen into heavier and heavier elements.</p>
+    <ul>
+      <li><span class="ic">←&thinsp;↑&thinsp;↓&thinsp;→</span><div><b>Swipe</b>, press an <b>arrow key</b> or <b>click a side</b> of the field. Every atom is blown as far as it can go.</div></li>
+      <li><span class="ic"><canvas data-z="1"></canvas><canvas data-z="1"></canvas><canvas data-z="1"></canvas></span><div><b>3 or more</b> of the same atom that touch <b>fuse</b> into the next element: hydrogen makes helium, helium makes lithium, and so on.</div></li>
+      <li><span class="ic"><canvas data-z="2"></canvas><canvas data-z="3"></canvas><canvas data-z="4"></canvas></span><div>The new atom can fuse again straight away. Set up a <b>chain</b> for ×2, ×3 and more.</div></li>
+      <li><span class="ic"><canvas data-g="1"></canvas></span><div><b>Faint atoms</b> show what appears after your next gust. Blow an atom onto one and it appears somewhere else.</div></li>
+      <li><span class="ic">+2</span><div>Fuse <b>5 or more</b> at once to skip an element. The star dies when the field is full.</div></li>
+    </ul>
+    <button type="button" class="go" id="helpgo">Play</button>
+  </div>
+</div>
+
+<div class="overlay" id="over">
+  <div class="card">
+    <h1>The star went dark</h1>
+    <p id="newbest">New best score!</p>
+    <p id="overmsg"></p>
+    <div class="nums">
+      <div class="stat"><small>Score</small><b id="oscore">0</b></div>
+      <div class="stat"><small>Heaviest</small><b id="otop">H</b></div>
+      <div class="stat"><small>Best chain</small><b id="ochain">0</b></div>
+    </div>
+    <button type="button" class="go" id="again">Play again</button>
+  </div>
+</div>
+
+<script>
+(() => {
+"use strict";
+
+// ===== LOGIC START =====
+// Pure game rules: no DOM in here, so the rules can be tested on their own.
+const N = 6, CELLS = N * N;
+const DIRS = { left: [-1, 0], right: [1, 0], up: [0, -1], down: [0, 1] };
+// The elements in order. A cell holds the atomic number (1 = hydrogen), or 0 when empty.
+const ELEMENTS = [null, ["H", "Hydrogen"], ["He", "Helium"], ["Li", "Lithium"], ["Be", "Beryllium"], ["B", "Boron"],
+  ["C", "Carbon"], ["N", "Nitrogen"], ["O", "Oxygen"], ["F", "Fluorine"], ["Ne", "Neon"], ["Na", "Sodium"],
+  ["Mg", "Magnesium"], ["Al", "Aluminium"], ["Si", "Silicon"], ["P", "Phosphorus"], ["S", "Sulfur"],
+  ["Cl", "Chlorine"], ["Ar", "Argon"]];
+const MAX_Z = ELEMENTS.length - 1;
+
+// What drifts in each turn depends on the heaviest element made so far.
+function spawnRules(top) {
+  return {
+    count: top < 2 ? 2 : top < 4 ? 3 : top < 6 ? 4 : top < 8 ? 5 : 6,
+    helium: top < 3 ? 0 : 0.3,                      // chance that a new atom is helium
+    lithium: top < 5 ? 0 : 0.12,                    // ... or lithium
+  };
+}
+
+function emptyCells(grid) {
+  const out = [];
+  for (let i = 0; i < CELLS; i++) if (!grid[i]) out.push(i);
+  return out;
+}
+
+// Blow every atom as far as it goes in one direction. Returns the moves made.
+function slide(grid, dir) {
+  const [dx, dy] = DIRS[dir], moves = [];
+  for (let a = 0; a < N; a++) {
+    let write = 0;
+    for (let k = 0; k < N; k++) {
+      const at = j => dx !== 0 ? a * N + (dx > 0 ? N - 1 - j : j) : (dy > 0 ? N - 1 - j : j) * N + a;
+      const from = at(k), c = grid[from];
+      if (!c) continue;
+      const to = at(write++);
+      if (to !== from) { grid[to] = c; grid[from] = 0; moves.push({ from, to, c }); }
+    }
+  }
+  return moves;
+}
+
+function canSlide(grid, dir) { return slide(grid.slice(), dir).length > 0; }
+function anyMove(grid) { return Object.keys(DIRS).some(d => canSlide(grid, d)); }
+
+// Groups of 3+ touching atoms of the same element.
+function findGroups(grid) {
+  const groups = [], seen = new Uint8Array(CELLS);
+  for (let start = 0; start < CELLS; start++) {
+    const z = grid[start];
+    if (!z || seen[start]) continue;
+    const cells = [start];
+    seen[start] = 1;
+    for (let n = 0; n < cells.length; n++) {
+      const i = cells[n], x = i % N, y = (i - x) / N;
+      for (const [ddx, ddy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        const nx = x + ddx, ny = y + ddy;
+        if (nx < 0 || ny < 0 || nx >= N || ny >= N) continue;
+        const j = ny * N + nx;
+        if (!seen[j] && grid[j] === z) { seen[j] = 1; cells.push(j); }
+      }
+    }
+    if (cells.length >= 3) groups.push({ z, cells });
+  }
+  return groups;
+}
+
+// Heavier elements are worth far more: each step up the table doubles the points.
+function fusePoints(newZ, size, chain) { return 10 * size * 2 ** Math.min(newZ - 2, 20) * chain; }
+
+function pickAtom(top, rng) {
+  const rules = spawnRules(top), r = rng();
+  return r < rules.lithium ? 3 : r < rules.lithium + rules.helium ? 2 : 1;
+}
+
+// Mark the cells where new atoms will condense after the next gust.
+function seedSprouts(state, rng) {
+  const rules = spawnRules(state.top), free = emptyCells(state.grid);
+  state.sprouts = [];
+  for (let n = 0; n < rules.count && free.length; n++) {
+    const i = free.splice(Math.floor(rng() * free.length), 1)[0];
+    state.sprouts.push({ i, c: pickAtom(state.top, rng) });
+  }
+  return state.sprouts.map(s => ({ i: s.i, c: s.c }));
+}
+
+function newGame(rng) {
+  const state = { grid: new Array(CELLS).fill(0), sprouts: [], score: 0, top: 1, fusions: 0, moves: 0, bestChain: 0, over: false };
+  do {
+    state.grid.fill(0);
+    const free = emptyCells(state.grid);
+    for (let n = 0; n < 5; n++) state.grid[free.splice(Math.floor(rng() * free.length), 1)[0]] = 1;
+  } while (findGroups(state.grid).length || !anyMove(state.grid));
+  seedSprouts(state, rng);
+  return state;
+}
+
+// Fuse every group into one heavier atom, let the rest settle in the wind, repeat.
+// Each round is one more link in the chain.
+function resolve(state, dir, steps, turn) {
+  const [dx, dy] = DIRS[dir];
+  for (;;) {
+    const groups = findGroups(state.grid);
+    if (!groups.length) return;
+    turn.chain++;
+    const before = state.grid.slice(), out = [], discovered = [];
+    let points = 0;
+    for (const g of groups) {
+      // The new atom forms at the cell furthest downwind, so it is already resting against something
+      const to = g.cells.slice().sort((p, q) =>
+        ((q % N) * dx + Math.floor(q / N) * dy) - ((p % N) * dx + Math.floor(p / N) * dy) || p - q)[0];
+      // Five or more at once skips an element. The last element has nowhere to go, so it burns up instead.
+      const newZ = g.z >= MAX_Z ? 0 : Math.min(MAX_Z, g.z + (g.cells.length >= 5 ? 2 : 1));
+      const pts = fusePoints(newZ || MAX_Z + 1, g.cells.length, turn.chain);
+      points += pts;
+      for (const i of g.cells) state.grid[i] = 0;
+      state.grid[to] = newZ;
+      if (newZ > state.top) { state.top = newZ; discovered.push(newZ); }
+      out.push({ z: g.z, cells: g.cells.slice(), to, newZ, points: pts });
+    }
+    state.score += points;
+    state.fusions += groups.length;
+    state.bestChain = Math.max(state.bestChain, turn.chain);
+    steps.push({ type: "fuse", before, after: state.grid.slice(), groups: out, chain: turn.chain, points,
+      score: state.score, top: state.top, discovered });
+    const b2 = state.grid.slice(), moves = slide(state.grid, dir);
+    if (moves.length) steps.push({ type: "slide", dir, before: b2, after: state.grid.slice(), moves });
+  }
+}
+
+// New atoms condense where they were marked. If an atom was blown onto the mark, the new one appears in a free cell instead.
+function growSprouts(state, steps, rng) {
+  const before = state.grid.slice(), grown = [], covered = [];
+  for (const s of state.sprouts) {
+    if (state.grid[s.i]) covered.push(s);
+    else { state.grid[s.i] = s.c; grown.push({ i: s.i, c: s.c, from: s.i }); }
+  }
+  const free = emptyCells(state.grid);
+  for (const s of covered) {
+    if (!free.length) break;
+    const i = free.splice(Math.floor(rng() * free.length), 1)[0];
+    state.grid[i] = s.c;
+    grown.push({ i, c: s.c, from: s.i });
+  }
+  state.sprouts = [];
+  steps.push({ type: "grow", before, after: state.grid.slice(), grown });
+}
+
+// One full turn. Returns the list of steps to animate, or null if the wind moves nothing.
+function playMove(state, dir, rng) {
+  if (state.over || !DIRS[dir]) return null;
+  const before = state.grid.slice(), moves = slide(state.grid, dir);
+  if (!moves.length) return null;
+  const steps = [{ type: "slide", dir, before, after: state.grid.slice(), moves }], turn = { chain: 0 };
+  state.moves++;
+  resolve(state, dir, steps, turn);
+  growSprouts(state, steps, rng);
+  resolve(state, dir, steps, turn);
+  // An empty field would leave nothing to blow around, so let the next atoms appear straight away
+  for (let guard = 0; guard < 20 && state.grid.every(v => !v); guard++) {
+    steps.push({ type: "seed", sprouts: seedSprouts(state, rng), grid: state.grid.slice() });
+    growSprouts(state, steps, rng);
+    resolve(state, dir, steps, turn);
+  }
+  if (state.grid.every(v => !v)) state.grid[Math.floor(rng() * CELLS)] = 1;
+  steps.push({ type: "seed", sprouts: seedSprouts(state, rng), grid: state.grid.slice() });
+  if (!anyMove(state.grid)) { state.over = true; steps.push({ type: "over" }); }
+  return steps;
+}
+// ===== LOGIC END =====
+
+// ---------- Small helpers ----------
+const $ = id => document.getElementById(id);
+const cv = $("cv"), ctx = cv.getContext("2d"), stage = $("stage");
+const clamp01 = v => v < 0 ? 0 : v > 1 ? 1 : v;
+const lerp = (a, b, t) => a + (b - a) * t;
+const easeOut = t => 1 - (1 - t) ** 3;
+const easeBack = t => { const c = 1.9; return 1 + (c + 1) * (t - 1) ** 3 + c * (t - 1) ** 2; };
+const fmt = n => Math.round(n).toLocaleString("en-US");
+const coarse = !!(window.matchMedia && matchMedia("(pointer:coarse)").matches);
+
+// High score, sound setting and the game in progress are kept in localStorage (if the browser allows it)
+const store = {
+  get(key, fallback) {
+    try { const v = localStorage.getItem("solar-gust:" + key); return v === null ? fallback : JSON.parse(v); }
+    catch (e) { return fallback; }
+  },
+  set(key, value) { try { localStorage.setItem("solar-gust:" + key, JSON.stringify(value)); } catch (e) { /* private mode */ } },
+};
+
+// ---------- Sound (synthesised, no files) ----------
+let muted = store.get("muted", false) === true;
+const sfx = (() => {
+  let ac = null, master = null, noise = null;
+  const SCALE = [0, 2, 4, 7, 9];
+  const hz = n => 261.63 * 2 ** ((SCALE[((n % 5) + 5) % 5] + 12 * Math.floor(n / 5)) / 12);
+  function get() {
+    if (muted) return null;
+    try {
+      if (!ac) {
+        const AC = window.AudioContext || window.webkitAudioContext;
+        if (!AC) return null;
+        ac = new AC();
+        master = ac.createGain();
+        master.gain.value = 0.5;
+        master.connect(ac.destination);
+      }
+      if (ac.state === "suspended") ac.resume();
+      return ac.state === "running" ? ac : null;
+    } catch (e) { return null; }
+  }
+  function note(freq, when, dur, vol, type) {
+    const a = get();
+    if (!a) return;
+    const t = a.currentTime + when, o = a.createOscillator(), g = a.createGain();
+    o.type = type || "triangle";
+    o.frequency.setValueAtTime(freq, t);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(vol, t + 0.012);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g); g.connect(master);
+    o.start(t); o.stop(t + dur + 0.05);
+  }
+  function whoosh(vol) {
+    const a = get();
+    if (!a) return;
+    if (!noise) {
+      noise = a.createBuffer(1, Math.floor(a.sampleRate * 0.3), a.sampleRate);
+      const d = noise.getChannelData(0);
+      for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    }
+    const t = a.currentTime, src = a.createBufferSource(), f = a.createBiquadFilter(), g = a.createGain();
+    src.buffer = noise;
+    f.type = "bandpass"; f.Q.value = 0.8;
+    f.frequency.setValueAtTime(500, t);
+    f.frequency.exponentialRampToValueAtTime(1900, t + 0.2);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(vol, t + 0.05);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.26);
+    src.connect(f); f.connect(g); g.connect(master);
+    src.start(t); src.stop(t + 0.3);
+  }
+  return {
+    unlock: get,
+    whoosh,
+    // The note climbs with the chain and with how heavy the new element is
+    fuse(chain, z, size) {
+      const b = Math.min(chain - 1, 6) * 2 + Math.min(z, 10) - 2;
+      note(hz(b), 0, 0.28, 0.2); note(hz(b + 2), 0.06, 0.3, 0.18); note(hz(b + 4), 0.12, 0.42, 0.18);
+      if (size >= 5) note(hz(b + 7), 0.2, 0.6, 0.16, "sine");
+    },
+    grow() { note(hz(8), 0, 0.1, 0.05, "sine"); },
+    thud() { note(104, 0, 0.13, 0.22, "sine"); },
+    discover() { [5, 7, 9, 10, 12].forEach((n, i) => note(hz(n), 0.15 + i * 0.07, 0.4, 0.15)); },
+    over() { [9, 7, 5, 2, 0].forEach((n, i) => note(hz(n) / 2, i * 0.15, 0.55, 0.18)); },
+  };
+})();
+let touched = false;   // phones only buzz after a real touch, which is also when browsers allow it
+function buzz(ms) { try { if (touched && !muted && navigator.vibrate) navigator.vibrate(ms); } catch (e) { /* not supported */ } }
+
+// ---------- Atom art ----------
+// One colour per element, [fill, text colour]. The symbol and atomic number are always printed on the atom too.
+const ART = [null,
+  ["#e9f1ff", "#18203a"], ["#ffd24a", "#3a2a00"], ["#ff7eb6", "#3d0a23"], ["#5ed88a", "#06301a"], ["#ff9248", "#3a1700"],
+  ["#8090ad", "#ffffff"], ["#4f8dff", "#ffffff"], ["#ff5a5f", "#ffffff"], ["#b6f25c", "#1f3300"], ["#ff5cf0", "#3a0036"],
+  ["#a98bff", "#ffffff"], ["#3fd4c6", "#00302c"], ["#cfd7e6", "#1c2333"], ["#c08a5a", "#ffffff"], ["#ff7a3c", "#ffffff"],
+  ["#f5e642", "#383300"], ["#57e06b", "#06300f"], ["#7fd8ff", "#04293a"]];
+const FONT = "system-ui,-apple-system,'Segoe UI',Roboto,sans-serif";
+
+function drawAtom(g, z, R, ghost) {
+  const [fill, ink] = ART[z], sym = ELEMENTS[z][0];
+  if (ghost) {
+    // An atom that has not arrived yet: small, see-through, with a dashed outline
+    g.globalAlpha = 0.3;
+    g.beginPath(); g.arc(0, 0, R, 0, Math.PI * 2); g.fillStyle = fill; g.fill();
+    g.globalAlpha = 0.95;
+    g.setLineDash([R * 0.32, R * 0.26]); g.lineWidth = Math.max(1.5, R * 0.11); g.strokeStyle = fill; g.stroke();
+    g.setLineDash([]);
+    g.fillStyle = "#ffffff";
+    g.font = "800 " + Math.round(R * (sym.length > 1 ? 0.9 : 1.1)) + "px " + FONT;
+    g.textAlign = "center"; g.textBaseline = "middle";
+    g.fillText(sym, 0, R * 0.06);
+    g.globalAlpha = 1;
+    return;
+  }
+  g.save();
+  g.shadowColor = fill; g.shadowBlur = R * 0.35;
+  const grad = g.createRadialGradient(-R * 0.35, -R * 0.4, R * 0.08, 0, 0, R);
+  grad.addColorStop(0, "#ffffff"); grad.addColorStop(0.3, fill); grad.addColorStop(1, shade(fill, 0.62));
+  g.beginPath(); g.arc(0, 0, R, 0, Math.PI * 2); g.fillStyle = grad; g.fill();
+  g.restore();
+  g.lineWidth = Math.max(1, R * 0.07); g.strokeStyle = "rgba(0,0,0,.3)"; g.stroke();
+  g.fillStyle = ink; g.textAlign = "center"; g.textBaseline = "middle";
+  g.font = "800 " + Math.round(R * (sym.length > 1 ? 0.84 : 1.02)) + "px " + FONT;
+  g.fillText(sym, 0, -R * 0.08);
+  g.globalAlpha = 0.75;
+  g.font = "700 " + Math.round(R * 0.4) + "px " + FONT;
+  g.fillText(String(z), 0, R * 0.6);
+  g.globalAlpha = 1;
+}
+// A darker version of a "#rrggbb" colour
+function shade(hex, k) {
+  const n = parseInt(hex.slice(1), 16);
+  return "rgb(" + [n >> 16, (n >> 8) & 255, n & 255].map(v => Math.round(v * k)).join(",") + ")";
+}
+
+let sprites = [], ghostSprites = [];
+function makeSprite(px, paint) {
+  const c = document.createElement("canvas");
+  c.width = c.height = px;
+  const g = c.getContext("2d");
+  g.translate(px / 2, px / 2);
+  paint(g);
+  return c;
+}
+function buildSprites() {
+  const px = Math.max(16, Math.ceil(cell * dpr));
+  sprites = []; ghostSprites = [];
+  for (let z = 1; z <= MAX_Z; z++) {
+    sprites[z] = makeSprite(px, g => drawAtom(g, z, px * 0.4, false));
+    ghostSprites[z] = makeSprite(px, g => drawAtom(g, z, px * 0.21, true));
+  }
+}
+
+// ---------- Game state and what is on screen ----------
+let state = null;
+let best = Number(store.get("best", 0)) || 0;
+let view = { grid: new Array(CELLS).fill(0), sprouts: [] };   // the field as drawn between animation steps
+let queue = [], step = null, stepT = 0, stepIndex = 0, pending = null;
+let W = 0, H = 0, dpr = 1, cell = 10, bx = 0, by = 0, bsize = 60;
+let particles = [], floats = [], streaks = [], callout = null, banner = null;
+let shake = 0, nudge = null, hoverDir = null, overTimer = 0, overFade = 0;
+
+const DURATION = { slide: 150, fuse: 360, grow: 260, seed: 170, over: 0 };
+
+function validSave(s) {
+  return !!s && typeof s === "object" && Array.isArray(s.grid) && s.grid.length === CELLS &&
+    s.grid.every(v => Number.isInteger(v) && v >= 0 && v <= MAX_Z) &&
+    Array.isArray(s.sprouts) && s.sprouts.length <= CELLS &&
+    s.sprouts.every(p => p && Number.isInteger(p.i) && p.i >= 0 && p.i < CELLS && Number.isInteger(p.c) && p.c >= 1 && p.c <= 3 && !s.grid[p.i]) &&
+    new Set(s.sprouts.map(p => p.i)).size === s.sprouts.length &&
+    ["score", "top", "fusions", "moves", "bestChain"].every(k => Number.isFinite(s[k]) && s[k] >= 0) &&
+    Number.isInteger(s.top) && s.top >= 1 && s.top <= MAX_Z && s.top >= Math.max(...s.grid) &&
+    s.grid.some(v => v) && !findGroups(s.grid).length && anyMove(s.grid);
+}
+function save() { store.set("save", state.over ? null : state); }
+
+function setHud(score, top, animate) {
+  const el = $("score"), txt = fmt(score);
+  if (el.textContent !== txt) {
+    el.textContent = txt;
+    if (animate) { el.classList.remove("bump"); void el.offsetWidth; el.classList.add("bump"); }
+  }
+  if (score > best) best = score;
+  $("best").textContent = fmt(best);
+  const tEl = $("top"), long = tEl.querySelector(".long"), name = ELEMENTS[top][1];
+  if (long.textContent !== name) {
+    long.textContent = name;
+    tEl.querySelector(".short").textContent = ELEMENTS[top][0] + " · " + top;
+    if (animate) { tEl.classList.remove("bump"); void tEl.offsetWidth; tEl.classList.add("bump"); }
+  }
+}
+
+function setTip() {
+  const el = $("tip"), m = state.moves;
+  el.textContent =
+    m < 2 ? (coarse ? "Swipe anywhere to send a gust of wind" : "Use the arrow keys, or click a side of the field") :
+    m < 6 ? "Bring 3 of the same atom together to fuse them" :
+    m < 12 ? "Faint atoms appear after your next gust. Plan ahead!" :
+    m < 18 ? "Fuse 5 or more at once to skip an element" :
+    m < 26 ? "Keep heavy atoms together so they can meet again" : "";
+}
+
+function startGame(fresh) {
+  const saved = fresh ? null : store.get("save", null);
+  if (validSave(saved)) {
+    state = { grid: saved.grid.slice(), sprouts: saved.sprouts.map(p => ({ i: p.i, c: p.c })), score: saved.score,
+      top: saved.top, fusions: saved.fusions, moves: saved.moves, bestChain: saved.bestChain, over: false };
+  } else {
+    state = newGame(Math.random);
+  }
+  queue = []; step = null; pending = null; stepT = 0;
+  particles = []; floats = []; streaks = []; callout = null; banner = null; shake = 0; overFade = 0;
+  clearTimeout(overTimer);
+  $("over").classList.remove("on");
+  syncView();
+  save();
+  setHud(state.score, state.top, false);
+  setTip();
+}
+function syncView() {
+  view.grid = state.grid.slice();
+  view.sprouts = state.sprouts.map(p => ({ i: p.i, c: p.c }));
+}
+
+// ---------- Turn handling ----------
+const overlayOpen = () => $("help").classList.contains("on") || $("over").classList.contains("on");
+
+function doMove(dir) {
+  if (!state || overlayOpen() || state.over) return;
+  if (step || queue.length) { pending = dir; return; }
+  const steps = playMove(state, dir, Math.random);
+  if (!steps) {
+    nudge = { dir, t: 0 };
+    sfx.thud();
+    return;
+  }
+  save();   // saved straight away, so closing the page mid-animation loses nothing
+  queue = steps; stepIndex = 0;
+  nextStep();
+}
+
+function nextStep() {
+  step = queue.shift() || null;
+  stepT = 0;
+  if (!step) return turnDone();
+  stepIndex++;
+  if (step.type === "slide") {
+    sfx.whoosh(stepIndex === 1 ? 0.3 : 0.12);
+    if (stepIndex === 1) addStreaks(step.dir);
+  } else if (step.type === "fuse") {
+    startFuse(step);
+  } else if (step.type === "grow") {
+    if (step.grown.length) sfx.grow();
+    for (const s of step.grown) if (s.from !== s.i) puff(s.i, ART[s.c][0], 6);
+  }
+}
+
+function endStep(s) {
+  if (s.after) view.grid = s.after;
+  if (s.type === "grow") view.sprouts = [];
+  if (s.type === "seed") { view.grid = s.grid; view.sprouts = s.sprouts; }
+}
+
+function turnDone() {
+  syncView();
+  setHud(state.score, state.top, false);
+  store.set("best", best);
+  setTip();
+  if (state.over) {
+    pending = null;
+    sfx.over();
+    const wasBest = state.score > 0 && state.score >= best;
+    overTimer = setTimeout(() => showOver(wasBest), 900);
+    return;
+  }
+  if (pending) { const d = pending; pending = null; doMove(d); }
+}
+
+function showOver(isBest) {
+  $("oscore").textContent = fmt(state.score);
+  $("otop").textContent = ELEMENTS[state.top][0];
+  $("ochain").textContent = state.bestChain > 1 ? "×" + state.bestChain : "–";
+  $("newbest").classList.toggle("on", isBest);
+  $("overmsg").textContent = "The field filled up after " + state.moves + " gusts. Your star got as far as " + ELEMENTS[state.top][1].toLowerCase() + ".";
+  $("over").classList.add("on");
+  $("again").focus();
+}
+
+// ---------- Effects ----------
+function cellXY(i) { return [bx + (i % N + 0.5) * cell, by + (Math.floor(i / N) + 0.5) * cell]; }
+
+function puff(i, color, count) {
+  const [x, y] = cellXY(i), k = cell / 60;
+  for (let n = 0; n < count && particles.length < 420; n++) {
+    const a = Math.random() * Math.PI * 2, sp = (70 + Math.random() * 240) * k;
+    particles.push({ x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, life: 0, max: 0.45 + Math.random() * 0.5, color, size: (2 + Math.random() * 3.5) * k });
+  }
+}
+
+const PRAISE = ["", "", "Chain", "Nice chain", "Great chain", "Chain reaction"];
+function startFuse(s) {
+  let biggest = 0, heaviest = 0;
+  for (const g of s.groups) {
+    biggest = Math.max(biggest, g.cells.length);
+    heaviest = Math.max(heaviest, g.newZ || MAX_Z);
+    const [x, y] = cellXY(g.to);
+    floats.push({ x, y, text: "+" + fmt(g.points), life: 0, max: 1, color: "#ffffff", size: cell * (0.34 + Math.min(0.16, g.cells.length * 0.02)), delay: 0.2 });
+  }
+  sfx.fuse(s.chain, heaviest, biggest);
+  buzz(s.chain > 1 ? 30 : 12);
+  setHud(s.score, s.top, true);
+  if (biggest >= 5) callout = { text: "Double jump!", sub: s.chain > 1 ? "Chain ×" + s.chain : "5 or more skips an element", t: 0 };
+  else if (s.chain > 1) callout = { text: PRAISE[Math.min(s.chain, PRAISE.length - 1)] + " ×" + s.chain, sub: "", t: 0 };
+  if (s.discovered.length) {
+    const z = s.discovered[s.discovered.length - 1];
+    banner = { text: ELEMENTS[z][1] + "!", sub: "New heaviest element · number " + z, t: 0 };
+    sfx.discover();
+  }
+}
+// Halfway through a fusion the old atoms have met: flash and scatter sparks from the new atom
+function fuseFlash(s) {
+  for (const g of s.groups) puff(g.to, g.newZ ? ART[g.newZ][0] : "#ffffff", 8 + g.cells.length * 2);
+  let biggest = 0;
+  for (const g of s.groups) biggest = Math.max(biggest, g.cells.length);
+  shake = Math.min(14, 2 + s.chain * 2.5 + (biggest >= 5 ? 3 : 0)) * (cell / 60);
+}
+
+function addStreaks(dir) {
+  const [dx, dy] = DIRS[dir];
+  for (let n = 0; n < 9; n++) {
+    const along = Math.random(), across = Math.random();
+    streaks.push({ dx, dy, x: bx + (dx ? along * 0.5 + (dx > 0 ? 0 : 0.5) : across) * bsize, y: by + (dy ? along * 0.5 + (dy > 0 ? 0 : 0.5) : across) * bsize,
+      len: cell * (0.5 + Math.random()), life: -Math.random() * 0.08, max: 0.32 });
+  }
+}
+
+// ---------- Layout ----------
+function resize() {
+  const r = stage.getBoundingClientRect();
+  W = r.width; H = r.height;
+  if (W < 20 || H < 20) return;
+  dpr = Math.min(window.devicePixelRatio || 1, 3);
+  cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
+  const pad = Math.max(14, Math.min(W, H) * 0.035);
+  bsize = Math.max(60, Math.min(W, H, 660) - pad * 2);
+  cell = bsize / N;
+  bx = (W - bsize) / 2; by = (H - bsize) / 2;
+  buildSprites();
+}
+
+// ---------- Drawing ----------
+function roundRect(x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+
+function drawSprite(img, x, y, scale, alpha) {
+  if (!img || scale <= 0.01 || alpha <= 0.01) return;
+  const s = cell * scale;
+  ctx.globalAlpha = Math.min(1, alpha);
+  ctx.drawImage(img, x - s / 2, y - s / 2, s, s);
+  ctx.globalAlpha = 1;
+}
+
+function drawBoard() {
+  const m = Math.min(8, cell * 0.12);
+  ctx.fillStyle = "#11142a";
+  roundRect(bx - m, by - m, bsize + m * 2, bsize + m * 2, cell * 0.26); ctx.fill();
+  const gap = cell * 0.045;
+  for (let i = 0; i < CELLS; i++) {
+    const x = bx + (i % N) * cell, y = by + Math.floor(i / N) * cell;
+    ctx.fillStyle = (i % N + Math.floor(i / N)) % 2 ? "#191d3c" : "#1d2246";
+    roundRect(x + gap, y + gap, cell - gap * 2, cell - gap * 2, cell * 0.2); ctx.fill();
+  }
+  // Mouse hint: which way a click here would blow
+  if (hoverDir && !step && !state.over && !overlayOpen()) {
+    const [dx, dy] = DIRS[hoverDir], cx = bx + bsize / 2 + dx * bsize * 0.5, cy = by + bsize / 2 + dy * bsize * 0.5;
+    const grad = ctx.createLinearGradient(cx - dx * cell * 1.2, cy - dy * cell * 1.2, cx, cy);
+    grad.addColorStop(0, "rgba(255,215,106,0)"); grad.addColorStop(1, "rgba(255,215,106,.2)");
+    ctx.save();
+    roundRect(bx, by, bsize, bsize, cell * 0.2); ctx.clip();
+    ctx.fillStyle = grad;
+    if (dx) ctx.fillRect(dx > 0 ? bx + bsize - cell * 1.2 : bx, by, cell * 1.2, bsize);
+    else ctx.fillRect(bx, dy > 0 ? by + bsize - cell * 1.2 : by, bsize, cell * 1.2);
+    ctx.restore();
+    const a = cell * 0.2, px = cx - dx * cell * 0.34, py = cy - dy * cell * 0.34;
+    ctx.fillStyle = "rgba(255,215,106,.9)";
+    ctx.beginPath();
+    ctx.moveTo(px + dx * a, py + dy * a);
+    ctx.lineTo(px - dx * a * 0.6 + dy * a, py - dy * a * 0.6 + dx * a);
+    ctx.lineTo(px - dx * a * 0.6 - dy * a, py - dy * a * 0.6 - dx * a);
+    ctx.closePath(); ctx.fill();
+  }
+}
+
+function drawSprouts(list, t, scale) {
+  for (const s of list) {
+    const [x, y] = cellXY(s.i);
+    drawSprite(ghostSprites[s.c], x, y, scale * (0.94 + 0.06 * Math.sin(t * 3 + s.i)), 1);
+  }
+}
+function drawGrid(grid, t, skip) {
+  for (let i = 0; i < CELLS; i++) {
+    const c = grid[i];
+    if (!c || (skip && skip.has(i))) continue;
+    const [x, y] = cellXY(i);
+    drawSprite(sprites[c], x, y + Math.sin(t * 1.6 + i * 1.7) * cell * 0.012, 1, 1);
+  }
+}
+
+function text(str, x, y, px, color, alpha) {
+  if (!str || px < 2) return;
+  ctx.globalAlpha = clamp01(alpha);
+  ctx.font = "800 " + Math.round(px) + "px " + FONT;
+  ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  ctx.lineJoin = "round"; ctx.lineWidth = Math.max(3, px * 0.2); ctx.strokeStyle = "rgba(8,9,22,.88)";
+  ctx.strokeText(str, x, y);
+  ctx.fillStyle = color; ctx.fillText(str, x, y);
+  ctx.globalAlpha = 1;
+}
+
+function draw(now) {
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, W, H);
+  if (W < 20 || H < 20 || !state) return;
+  const t = now / 1000;
+  let ox = 0, oy = 0;
+  if (shake > 0.2) { ox += (Math.random() - 0.5) * shake; oy += (Math.random() - 0.5) * shake; }
+  if (nudge) { const k = Math.sin(Math.PI * nudge.t) * cell * 0.09; ox += DIRS[nudge.dir][0] * k; oy += DIRS[nudge.dir][1] * k; }
+  ctx.save();
+  ctx.translate(ox, oy);
+  drawBoard();
+
+  const p = step ? clamp01(stepT / (DURATION[step.type] || 1)) : 0;
+  if (!step) {
+    drawSprouts(view.sprouts, t, 1);
+    drawGrid(view.grid, t);
+  } else if (step.type === "slide") {
+    drawSprouts(view.sprouts, t, 1);
+    const moving = new Set(step.moves.map(m => m.from)), e = easeOut(p);
+    drawGrid(step.before, t, moving);
+    for (const m of step.moves) {
+      const [x0, y0] = cellXY(m.from), [x1, y1] = cellXY(m.to);
+      drawSprite(sprites[m.c], lerp(x0, x1, e), lerp(y0, y1, e), 1, 1);
+    }
+  } else if (step.type === "fuse") {
+    drawSprouts(view.sprouts, t, 1);
+    const busy = new Set();
+    for (const g of step.groups) for (const i of g.cells) busy.add(i);
+    drawGrid(step.before, t, busy);
+    const meet = 0.5;
+    for (const g of step.groups) {
+      const [tx, ty] = cellXY(g.to);
+      if (p < meet) {
+        // The old atoms rush together
+        const q = (p / meet) ** 2;
+        for (const i of g.cells) {
+          const [x, y] = cellXY(i);
+          drawSprite(sprites[g.z], lerp(x, tx, q), lerp(y, ty, q), 1 - 0.25 * q, 1);
+        }
+      } else {
+        // ... and the new element bursts out
+        const q = (p - meet) / (1 - meet);
+        ctx.globalAlpha = (1 - q) * 0.9; ctx.strokeStyle = "#ffffff"; ctx.lineWidth = cell * 0.07 * (1 - q) + 1;
+        ctx.beginPath(); ctx.arc(tx, ty, cell * (0.3 + 0.55 * q), 0, Math.PI * 2); ctx.stroke(); ctx.globalAlpha = 1;
+        if (g.newZ) drawSprite(sprites[g.newZ], tx, ty, Math.max(0, 0.5 + 0.5 * easeBack(q)), 1);
+        ctx.globalAlpha = (1 - q) * 0.8; ctx.fillStyle = "#ffffff";
+        ctx.beginPath(); ctx.arc(tx, ty, cell * 0.4 * (1 - q * 0.4), 0, Math.PI * 2); ctx.fill(); ctx.globalAlpha = 1;
+      }
+    }
+  } else if (step.type === "grow") {
+    drawGrid(step.before, t);
+    for (const s of step.grown) {
+      const [x, y] = cellXY(s.i);
+      drawSprite(sprites[s.c], x, y, s.from === s.i ? lerp(0.5, 1, easeBack(p)) : Math.max(0, easeBack(p)), 1);
+    }
+  } else if (step.type === "seed") {
+    drawSprouts(step.sprouts, t, Math.max(0, easeBack(p)));
+    drawGrid(step.grid, t);
+  } else {
+    drawGrid(view.grid, t);
+  }
+
+  for (const s of streaks) {
+    if (s.life < 0) continue;
+    const q = s.life / s.max, d = q * bsize * 0.5;
+    ctx.globalAlpha = Math.sin(Math.PI * q) * 0.35;
+    ctx.strokeStyle = "#eaf6ff"; ctx.lineWidth = Math.max(1.5, cell * 0.035); ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.moveTo(s.x + s.dx * d, s.y + s.dy * d);
+    ctx.lineTo(s.x + s.dx * (d + s.len), s.y + s.dy * (d + s.len));
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+  for (const q of particles) {
+    ctx.globalAlpha = clamp01(1 - q.life / q.max);
+    ctx.fillStyle = q.color;
+    ctx.beginPath(); ctx.arc(q.x, q.y, q.size, 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+  for (const f of floats) {
+    if (f.life < 0) continue;
+    const q = f.life / f.max;
+    text(f.text, f.x, f.y - cell * 0.35 - easeOut(q) * cell * 0.6, f.size * (0.7 + 0.3 * Math.min(1, q * 6)), f.color, 1 - q * q * q);
+  }
+  ctx.restore();
+
+  if (overFade > 0) {
+    ctx.fillStyle = "rgba(6,7,16," + (0.5 * overFade).toFixed(3) + ")";
+    ctx.fillRect(0, 0, W, H);
+  }
+  const fit = (str, px) => Math.min(px, (W - 24) / Math.max(1, str.length) * 1.75);
+  if (callout) {
+    const q = callout.t / 1.1, s = Math.max(0, easeBack(Math.min(1, q * 5))), big = fit(callout.text, cell * 0.6) * s;
+    const y = by + bsize * 0.55, al = 1 - Math.max(0, (q - 0.65) / 0.35);
+    text(callout.text, W / 2, y, big, "#ffd76a", al);
+    text(callout.sub, W / 2, y + big * 0.9, fit(callout.sub, cell * 0.3) * s, "#ffffff", al);
+  }
+  if (banner) {
+    const q = banner.t / 2, s = Math.max(0, easeBack(Math.min(1, q * 6))), big = fit(banner.text, cell * 0.8) * s;
+    const y = by + bsize * 0.22, al = 1 - Math.max(0, (q - 0.75) / 0.25);
+    text(banner.text, W / 2, y, big, "#ffffff", al);
+    text(banner.sub, W / 2, y + big * 0.85, fit(banner.sub, cell * 0.3) * s, "#ffd76a", al);
+  }
+}
+
+// ---------- Main loop ----------
+let last = 0;
+function frame(now) {
+  const dt = Math.min(50, Math.max(0, now - last));
+  last = now;
+  const sec = dt / 1000;
+  if (step) {
+    const was = stepT;
+    stepT += dt * (pending ? 1.8 : 1);
+    if (step.type === "fuse" && was < DURATION.fuse * 0.5 && stepT >= DURATION.fuse * 0.5) fuseFlash(step);
+    let guard = 0;
+    while (step && stepT >= (DURATION[step.type] || 0) && guard++ < 50) { endStep(step); nextStep(); }
+  }
+  if (nudge) { nudge.t += dt / 170; if (nudge.t >= 1) nudge = null; }
+  shake *= Math.pow(0.002, sec);
+  if (callout) { callout.t += sec; if (callout.t >= 1.1) callout = null; }
+  if (banner) { banner.t += sec; if (banner.t >= 2) banner = null; }
+  overFade = state && state.over && !step ? Math.min(1, overFade + sec * 1.5) : 0;
+  for (const q of particles) { q.life += sec; q.vx *= 1 - 2.4 * sec; q.vy *= 1 - 2.4 * sec; q.x += q.vx * sec; q.y += q.vy * sec; }
+  particles = particles.filter(q => q.life < q.max);
+  for (const f of floats) { if (f.delay > 0) { f.delay -= sec; if (f.delay <= 0) f.life = 0; else f.life = -1; } else f.life += sec; }
+  floats = floats.filter(f => f.life < f.max);
+  for (const s of streaks) s.life += sec;
+  streaks = streaks.filter(s => s.life < s.max);
+  draw(now);
+  requestAnimationFrame(frame);
+}
+
+// ---------- Input ----------
+const KEYS = { ArrowLeft: "left", ArrowRight: "right", ArrowUp: "up", ArrowDown: "down",
+  a: "left", d: "right", w: "up", s: "down", A: "left", D: "right", W: "up", S: "down" };
+window.addEventListener("keydown", e => {
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  if (overlayOpen()) {
+    if (e.key === "Escape" && $("help").classList.contains("on")) closeHelp();
+    if (KEYS[e.key] && e.key.startsWith("Arrow")) e.preventDefault();
+    return;
+  }
+  const dir = KEYS[e.key];
+  if (!dir) return;
+  e.preventDefault();
+  sfx.unlock();
+  if (!e.repeat) doMove(dir);
+});
+
+// Which side of the field a point is on (for mouse clicks), or null near the middle and outside
+function sideAt(clientX, clientY) {
+  const r = cv.getBoundingClientRect();
+  const dx = clientX - r.left - (bx + bsize / 2), dy = clientY - r.top - (by + bsize / 2), half = bsize / 2 + 14;
+  if (Math.abs(dx) > half || Math.abs(dy) > half || Math.hypot(dx, dy) < cell * 0.45) return null;
+  return Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? "right" : "left") : (dy > 0 ? "down" : "up");
+}
+
+let drag = null;
+$("app").addEventListener("pointerdown", e => {
+  if (e.target.closest("button")) return;
+  if (e.pointerType === "mouse" && e.button !== 0) return;
+  if (e.pointerType === "touch" && e.isTrusted) touched = true;
+  sfx.unlock();
+  drag = { id: e.pointerId, x: e.clientX, y: e.clientY, fired: false, mouse: e.pointerType === "mouse" };
+});
+window.addEventListener("pointermove", e => {
+  if (e.pointerType === "mouse") hoverDir = drag ? null : sideAt(e.clientX, e.clientY);
+  if (!drag || drag.id !== e.pointerId || drag.fired) return;
+  const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+  if (Math.hypot(dx, dy) < Math.max(16, Math.min(40, cell * 0.4))) return;
+  drag.fired = true;
+  doMove(Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? "right" : "left") : (dy > 0 ? "down" : "up"));
+});
+window.addEventListener("pointerup", e => {
+  if (!drag || drag.id !== e.pointerId) return;
+  const d = drag;
+  drag = null;
+  sfx.unlock();
+  if (!d.fired && d.mouse) { const dir = sideAt(e.clientX, e.clientY); if (dir) doMove(dir); }
+});
+window.addEventListener("pointercancel", () => { drag = null; });
+document.addEventListener("mouseleave", () => { hoverDir = null; });
+window.addEventListener("blur", () => { drag = null; hoverDir = null; });
+cv.addEventListener("contextmenu", e => e.preventDefault());
+// Stop the page from scrolling or zooming under a swipe on older mobile browsers
+document.addEventListener("touchmove", e => { if (!e.target.closest(".card")) e.preventDefault(); }, { passive: false });
+
+// ---------- Buttons and overlays ----------
+function openHelp() { $("help").classList.add("on"); $("helpgo").focus(); }
+function closeHelp() { $("help").classList.remove("on"); store.set("seenHelp", true); sfx.unlock(); }
+$("how").addEventListener("click", openHelp);
+$("helpgo").addEventListener("click", closeHelp);
+$("help").addEventListener("click", e => { if (e.target === $("help")) closeHelp(); });
+$("again").addEventListener("click", () => { sfx.unlock(); startGame(true); });
+
+function showSound() { $("snd").classList.toggle("off", muted); }
+$("snd").addEventListener("click", () => {
+  muted = !muted;
+  store.set("muted", muted);
+  showSound();
+  if (!muted) sfx.fuse(1, 3, 3);
+});
+
+let sureTimer = 0;
+function unsure() { clearTimeout(sureTimer); $("new").classList.remove("sure"); $("new").textContent = "↻"; }
+$("new").addEventListener("click", () => {
+  const btn = $("new");
+  if (state.moves > 0 && !state.over && !btn.classList.contains("sure")) {
+    btn.classList.add("sure"); btn.textContent = "Sure?";
+    sureTimer = setTimeout(unsure, 2600);
+    return;
+  }
+  unsure();
+  startGame(true);
+});
+// Buttons give focus back after a click, so the arrow keys keep driving the game
+for (const b of document.querySelectorAll("#hud button")) b.addEventListener("click", () => b.blur());
+
+// Little atom pictures in the how-to-play card
+for (const c of document.querySelectorAll(".card li canvas")) {
+  c.width = c.height = 72;
+  const g = c.getContext("2d");
+  g.translate(36, 36);
+  if (c.dataset.g) drawAtom(g, +c.dataset.g, 22, true); else drawAtom(g, +c.dataset.z, 30, false);
+}
+
+// ---------- Start ----------
+resize();
+window.addEventListener("resize", resize);
+if (window.ResizeObserver) new ResizeObserver(resize).observe(stage);
+showSound();
+startGame(false);
+if (!store.get("seenHelp", false)) openHelp();
+requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

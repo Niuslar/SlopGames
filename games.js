@@ -38,4 +38,16 @@ window.SLOP_GAMES = [
     added: "2026-11-14",
     thumbnail: "games/jamblobs/thumb.svg"
   },
+  {
+    slug: "solar-gust",
+    title: "Solar Gust",
+    description: "You are the wind inside a star. Each gust slides every atom across the field: bring 3 of a kind together to fuse hydrogen into helium, helium into lithium and beyond, and set off chain reactions before the field fills up.",
+    author: "SlopGames",
+    authorUrl: "",
+    madeWith: "Claude",
+    tags: ["puzzle", "strategy", "score-attack", "mobile"],
+    controls: "Swipe, arrow keys or mouse",
+    added: "2026-11-16",
+    thumbnail: "games/solar-gust/thumb.svg"
+  },
 ];
